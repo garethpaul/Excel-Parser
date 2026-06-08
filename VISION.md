@@ -21,17 +21,28 @@ Priority:
 - Avoid claiming date conversion support that the code does not implement
 - Keep dependencies and Python 2 syntax constraints visible
 
+Current baseline:
+
+- `parse.py` keeps the callback API while using Python 2/3-compatible syntax.
+- Workbooks are opened on demand and release resources after processing.
+- `xlrd==1.2.0` is documented as the legacy dependency for real workbook
+  parsing; offline tests use synthetic fake workbooks.
+- `make check` runs conversion, missing-cell, completion, and exception-callback
+  coverage without private spreadsheet fixtures.
+- Date conversion remains explicitly unsupported.
+
 Next priorities:
 
-- Add a README with usage examples and supported `xlrd` versions
+- Add real `.xls` fixture coverage using synthetic data if workbook integration
+  behavior changes
 - Port to supported Python syntax in a dedicated pass
-- Add tests for empty cells, missing columns, invalid conversions, and callbacks
 - Decide whether modern `.xlsx` support is in scope
 
 Contribution rules:
 
 - One PR = one focused parser, test, or documentation change.
-- Include small fixture workbooks for parser behavior when adding tests.
+- Run `scripts/check-baseline.sh` before pushing parser changes.
+- Use synthetic fixtures or fake workbook objects for parser behavior tests.
 - Document unsupported conversions rather than silently accepting them.
 - Keep callback behavior backward-compatible unless a migration note explains it.
 

@@ -1,0 +1,135 @@
+import unittest
+
+import parse
+
+
+class FakeSheet(object):
+    def __init__(self, rows):
+        self.rows = rows
+        self.nrows = len(rows)
+
+    def cell_type(self, rowid, cellid):
+        return self.rows[rowid][cellid][0]
+
+    def cell_value(self, rowid, cellid):
+        return self.rows[rowid][cellid][1]
+
+
+class FakeBook(object):
+    def __init__(self, sheets):
+        self.sheets = sheets
+        self.released = False
+
+    def sheet_by_name(self, sheet_name):
+        return self.sheets[sheet_name]
+
+    def release_resources(self):
+        self.released = True
+
+
+class FakeXlrd(object):
+    XL_CELL_EMPTY = 0
+    XL_CELL_TEXT = 1
+    XL_CELL_NUMBER = 2
+    XL_CELL_DATE = 3
+
+    def __init__(self, sheets):
+        self.sheets = sheets
+        self.opened = []
+
+    def open_workbook(self, excel, on_demand=False):
+        book = FakeBook(self.sheets)
+        self.opened.append((excel, on_demand, book))
+        return book
+
+
+class ExcelProcessorTests(unittest.TestCase):
+    def setUp(self):
+        self.original_xlrd = parse.xlrd
+
+    def tearDown(self):
+        parse.xlrd = self.original_xlrd
+
+    def processor(self, rows, row_callback=None, done_callback=None, exception_callback=None):
+        fake_xlrd = FakeXlrd({"People": FakeSheet(rows)})
+        parse.xlrd = fake_xlrd
+        row_callback = row_callback or (lambda _rowid, _values: None)
+        done_callback = done_callback or (lambda: None)
+        return parse.ExcelProcessor(row_callback, done_callback, exception_callback), fake_xlrd
+
+    def test_convert_type_handles_text_and_number_targets(self):
+        processor, _fake_xlrd = self.processor([])
+
+        self.assertEqual("Gareth", processor.convert_type(FakeXlrd.XL_CELL_TEXT, parse.ExcelProcessor.CELL_TEXT, " Gareth "))
+        self.assertEqual(7, processor.convert_type(FakeXlrd.XL_CELL_TEXT, parse.ExcelProcessor.CELL_INT, " 7 "))
+        self.assertEqual(7.5, processor.convert_type(FakeXlrd.XL_CELL_TEXT, parse.ExcelProcessor.CELL_FLOAT, " 7.5 "))
+        self.assertEqual("3.0", processor.convert_type(FakeXlrd.XL_CELL_NUMBER, parse.ExcelProcessor.CELL_TEXT, 3.0))
+        self.assertEqual(3, processor.convert_type(FakeXlrd.XL_CELL_NUMBER, parse.ExcelProcessor.CELL_INT, 3.9))
+        self.assertEqual(3.9, processor.convert_type(FakeXlrd.XL_CELL_NUMBER, parse.ExcelProcessor.CELL_FLOAT, 3.9))
+
+    def test_date_conversion_is_not_claimed(self):
+        processor, _fake_xlrd = self.processor([])
+
+        with self.assertRaises(parse.InvalidDataException):
+            processor.convert_type(FakeXlrd.XL_CELL_TEXT, parse.ExcelProcessor.CELL_DATE, "2026-06-08")
+
+        with self.assertRaises(parse.InvalidDataException):
+            processor.convert_type(FakeXlrd.XL_CELL_DATE, parse.ExcelProcessor.CELL_TEXT, 44352)
+
+    def test_process_skips_header_and_handles_missing_cells(self):
+        rows = [
+            [(FakeXlrd.XL_CELL_TEXT, "Name"), (FakeXlrd.XL_CELL_TEXT, "Count")],
+            [(FakeXlrd.XL_CELL_TEXT, " Alice "), (FakeXlrd.XL_CELL_NUMBER, 2.0)],
+            [(FakeXlrd.XL_CELL_TEXT, "Bob")],
+            [(FakeXlrd.XL_CELL_EMPTY, ""), (FakeXlrd.XL_CELL_NUMBER, 3.0)],
+        ]
+        received = []
+        done = []
+        processor, fake_xlrd = self.processor(
+            rows,
+            lambda rowid, values: received.append((rowid, values)),
+            lambda: done.append(True),
+        )
+
+        processor.process("fixture.xls", "People", True, [
+            parse.ExcelProcessor.CELL_TEXT,
+            parse.ExcelProcessor.CELL_INT,
+        ])
+
+        self.assertEqual("fixture.xls", fake_xlrd.opened[0][0])
+        self.assertTrue(fake_xlrd.opened[0][1])
+        self.assertTrue(fake_xlrd.opened[0][2].released)
+        self.assertEqual([
+            (1, ["Alice", 2]),
+            (2, ["Bob", None]),
+            (3, [None, 3]),
+        ], received)
+        self.assertEqual([True], done)
+
+    def test_exception_callback_receives_row_errors_and_processing_continues(self):
+        rows = [
+            [(FakeXlrd.XL_CELL_TEXT, "Count")],
+            [(FakeXlrd.XL_CELL_TEXT, "not-a-number")],
+            [(FakeXlrd.XL_CELL_TEXT, "4")],
+        ]
+        received = []
+        errors = []
+        done = []
+        processor, _fake_xlrd = self.processor(
+            rows,
+            lambda rowid, values: received.append((rowid, values)),
+            lambda: done.append(True),
+            lambda rowid, exc: errors.append((rowid, exc)),
+        )
+
+        processor.process("fixture.xls", "People", True, [parse.ExcelProcessor.CELL_INT])
+
+        self.assertEqual([(2, [4])], received)
+        self.assertEqual(1, len(errors))
+        self.assertEqual(1, errors[0][0])
+        self.assertIsInstance(errors[0][1], ValueError)
+        self.assertEqual([True], done)
+
+
+if __name__ == "__main__":
+    unittest.main()

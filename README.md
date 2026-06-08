@@ -5,44 +5,65 @@
 
 ## Overview
 
-`garethpaul/Excel-Parser` is a public sample, documentation, or utility project. Excel Parser for XLRD
+`garethpaul/Excel-Parser` is a small callback-driven Python helper for reading
+rows from a named Excel sheet with `xlrd` and converting cell values into
+declared target types.
 
-This README is based on the checked-in source, manifests, scripts, and repository metadata on the `master` branch. The project language mix found during review was: Python (1).
+The parser preserves a Python 2-era API, but `parse.py` is importable and
+unit-tested under Python 3 for offline conversion and callback behavior.
 
 ## Repository Contents
 
+- `parse.py` - Excel row processor and conversion helpers
+- `tests/test_parse.py` - synthetic fake-workbook parser tests
+- `requirements.txt` - `xlrd` dependency range for real `.xls` workbook parsing
+- `Makefile` - local verification entry point
+- `CHANGES.md` - maintenance history
 - `SECURITY.md` - security reporting and disclosure guidance
 - `VISION.md` - project direction and maintenance guardrails
-
-Additional scan context:
-
-- Source directories: no top-level source directories detected
-- Dependency and build manifests: none detected
-- Entry points or build surfaces: none detected
-- Test-looking files: no obvious test files detected
 
 ## Getting Started
 
 ### Prerequisites
 
 - Git
+- Python 3 for local tests
+- Python 2.7 when validating legacy syntax
+- `xlrd>=2.0.1,<3` when processing real `.xls` workbook files
 
 ### Setup
 
 ```bash
 git clone https://github.com/garethpaul/Excel-Parser.git
 cd Excel-Parser
+python3 -m pip install -r requirements.txt
 ```
 
-The setup commands above are derived from repository files. Legacy mobile, Python, or JavaScript samples may require older SDKs or package versions than a modern workstation uses by default.
+The unit tests do not require a real workbook fixture; they use synthetic
+workbook objects. Install `requirements.txt` when you need to process real
+`.xls` files. Modern `.xlsx` support is intentionally not claimed by this
+baseline.
 
 ## Running or Using the Project
 
-- No single runtime entry point was identified. Start by reading the source files and manifests listed above.
+- Instantiate `ExcelProcessor(row_callback, done_callback, exception_callback)`
+  from `parse.py`.
+- Call `process(path, sheet_name, has_header, cell_types)` with target cell
+  types such as `ExcelProcessor.CELL_TEXT`, `CELL_INT`, and `CELL_FLOAT`.
+- Date conversion is intentionally unsupported and raises
+  `InvalidDataException`.
 
 ## Testing and Verification
 
-- No dedicated automated test command was identified from the checked-in files. Verify changes by running the relevant build or manually exercising the sample.
+Run the local maintenance gate:
+
+```bash
+make check
+```
+
+`make check` runs Python 3 unit tests with synthetic workbook data, compiles the
+parser under Python 3, and runs a Python 2 syntax check when `python2` is
+available.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
 
@@ -53,11 +74,17 @@ When the required SDK or runtime is unavailable, use static checks and source re
 ## Security and Privacy Notes
 
 - Review changes touching file, media, JSON, XML, CSV, OCR, or data parsing; examples from the scan include parse.py.
+- Use synthetic spreadsheets or fake workbook objects in tests. Do not commit
+  private spreadsheet data.
+- Parser errors should avoid dumping full row contents unless a caller
+  explicitly asks for that behavior.
 
 ## Maintenance Notes
 
 - See `SECURITY.md` for vulnerability reporting and safe research guidance.
 - See `VISION.md` for project direction and contribution guardrails.
+- See `docs/plans/2026-06-08-excel-parser-maintenance-baseline.md` for the
+  current parser maintenance baseline.
 
 ## Contributing
 
