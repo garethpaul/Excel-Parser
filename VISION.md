@@ -38,7 +38,6 @@ Canonical security policy and reporting:
 
 - [`SECURITY.md`](SECURITY.md)
 
-
 Excel files can contain sensitive data. Tests and examples should use synthetic
 fixtures only, and parser errors should avoid dumping full row contents unless a
 caller explicitly requests that behavior.
