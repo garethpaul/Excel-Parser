@@ -25,8 +25,8 @@ Current baseline:
 
 - `parse.py` keeps the callback API while using Python 2/3-compatible syntax.
 - Workbooks are opened on demand and release resources after processing.
-- `xlrd==1.2.0` is documented as the legacy dependency for real workbook
-  parsing; offline tests use synthetic fake workbooks.
+- `xlrd` 2.x is documented as the real `.xls` workbook dependency; offline
+  tests use synthetic fake workbooks.
 - `make check` runs conversion, missing-cell, completion, and exception-callback
   coverage without private spreadsheet fixtures.
 - Date conversion remains explicitly unsupported.
