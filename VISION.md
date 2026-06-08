@@ -44,3 +44,6 @@ caller explicitly requests that behavior.
 - Broad parser rewrites without fixtures
 - Date conversion claims without implementation and tests
 - Dependency changes that make supported file formats ambiguous
+
+This list is a roadmap guardrail, not a permanent rule.
+Strong user demand and strong technical rationale can change it.
