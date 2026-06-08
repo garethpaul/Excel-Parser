@@ -38,7 +38,7 @@ Excel files can contain sensitive data. Tests and examples should use synthetic
 fixtures only, and parser errors should avoid dumping full row contents unless a
 caller explicitly requests that behavior.
 
-## What We Will Not Merge For Now
+## What We Will Not Merge (For Now)
 
 - Private spreadsheet data
 - Broad parser rewrites without fixtures
