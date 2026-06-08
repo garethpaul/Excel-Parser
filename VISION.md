@@ -1,5 +1,8 @@
 ## Excel Parser Vision
 
+This document explains the current state and direction of the project.
+Project overview and developer docs: [`README.md`](README.md)
+
 Excel Parser is a small Python 2-era `xlrd` helper for processing rows from a
 named Excel sheet with declared target cell types and callbacks.
 
