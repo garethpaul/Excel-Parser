@@ -18,6 +18,7 @@ Priority:
 
 - Preserve the row callback, completion callback, and exception callback API
 - Keep type conversion behavior easy to inspect
+- Avoid silent data loss when converting fractional numeric cells to integers
 - Avoid claiming date conversion support that the code does not implement
 - Keep dependencies and Python 2 syntax constraints visible
 
@@ -29,6 +30,8 @@ Current baseline:
   tests use synthetic fake workbooks.
 - `make check` runs conversion, missing-cell, completion, and exception-callback
   coverage without private spreadsheet fixtures.
+- Fractional numeric cells requested as integers raise `InvalidDataException`
+  instead of being truncated.
 - Date conversion remains explicitly unsupported.
 
 Next priorities:

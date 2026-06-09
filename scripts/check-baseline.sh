@@ -29,6 +29,7 @@ for path in \
   "parse.py" \
   "requirements.txt" \
   "tests/test_parse.py" \
+  "docs/plans/2026-06-08-fractional-int-conversion.md" \
   "docs/plans/2026-06-08-excel-parser-maintenance-baseline.md"; do
   require_file "$path"
 done
@@ -50,14 +51,16 @@ fi
 if ! grep -Fq "make check" "$ROOT_DIR/README.md" ||
   ! grep -Fq "xlrd" "$ROOT_DIR/README.md" ||
   ! grep -Fq "Python 2" "$ROOT_DIR/README.md" ||
-  ! grep -Fq "synthetic" "$ROOT_DIR/README.md"; then
+  ! grep -Fq "synthetic" "$ROOT_DIR/README.md" ||
+  ! grep -Fq "fractional" "$ROOT_DIR/README.md"; then
   printf '%s\n' "README must document the check command, xlrd dependency, legacy Python posture, and fixture safety." >&2
   exit 1
 fi
 
 if ! grep -Fq "scripts/check-baseline.sh" "$ROOT_DIR/VISION.md" ||
   ! grep -Fq "fake workbook" "$ROOT_DIR/VISION.md" ||
-  ! grep -Fq "date conversion" "$ROOT_DIR/VISION.md"; then
+  ! grep -Fq "date conversion" "$ROOT_DIR/VISION.md" ||
+  ! grep -Fq "Fractional numeric cells" "$ROOT_DIR/VISION.md"; then
   printf '%s\n' "VISION must describe the current parser baseline and date-conversion boundary." >&2
   exit 1
 fi
@@ -66,6 +69,8 @@ if grep -Fq "except Exception," "$ROOT_DIR/parse.py" ||
   ! grep -Fq "_MissingXlrd" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "cell_types=None" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "newtype == ExcelProcessor.CELL_EMPTY" "$ROOT_DIR/parse.py" ||
+  ! grep -Fq "def convert_number_to_int" "$ROOT_DIR/parse.py" ||
+  ! grep -Fq "number.is_integer()" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "except Exception as exc" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "on_demand=True" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "release_resources" "$ROOT_DIR/parse.py"; then
@@ -76,8 +81,15 @@ fi
 if ! grep -Fq "FakeXlrd" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_process_skips_header_and_handles_missing_cells" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_process_allows_cell_empty_targets_to_skip_present_values" "$ROOT_DIR/tests/test_parse.py" ||
+  ! grep -Fq "test_number_to_int_rejects_fractional_values" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_exception_callback_receives_row_errors_and_processing_continues" "$ROOT_DIR/tests/test_parse.py"; then
   printf '%s\n' "Offline tests must cover fake-workbook processing and callback error behavior." >&2
+  exit 1
+fi
+
+if ! grep -Fq "fractional numeric" "$ROOT_DIR/CHANGES.md" ||
+  ! grep -Fq "status: completed" "$ROOT_DIR/docs/plans/2026-06-08-fractional-int-conversion.md"; then
+  printf '%s\n' "Fractional integer conversion guard must be documented and planned." >&2
   exit 1
 fi
 

@@ -52,6 +52,8 @@ baseline.
   types such as `ExcelProcessor.CELL_TEXT`, `CELL_INT`, and `CELL_FLOAT`.
 - Use `ExcelProcessor.CELL_EMPTY` in `cell_types` to ignore a present source
   cell and receive `None` for that output position.
+- Numeric cells convert to `CELL_INT` only when the value is integer-valued;
+  fractional numbers raise `InvalidDataException` instead of being truncated.
 - Date conversion is intentionally unsupported and raises
   `InvalidDataException`.
 
@@ -87,6 +89,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - See `VISION.md` for project direction and contribution guardrails.
 - See `docs/plans/2026-06-08-excel-parser-maintenance-baseline.md` for the
   current parser maintenance baseline.
+- See `docs/plans/2026-06-08-fractional-int-conversion.md` for numeric
+  integer-conversion guardrails.
 
 ## Contributing
 

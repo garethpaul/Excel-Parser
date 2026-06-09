@@ -85,7 +85,7 @@ class ExcelProcessor(object):
             if newtype == ExcelProcessor.CELL_TEXT:
                 return str(data)
             elif newtype == ExcelProcessor.CELL_INT:
-                return int(data)
+                return self.convert_number_to_int(data)
             elif newtype == ExcelProcessor.CELL_FLOAT:
                 return float(data)
             elif newtype == ExcelProcessor.CELL_DATE:
@@ -96,3 +96,9 @@ class ExcelProcessor(object):
             raise InvalidDataException("Conversion from Date Type not supported")
         else:
             raise InvalidDataException("Invalid source datatype : " + str(curtype))
+
+    def convert_number_to_int(self, data):
+        number = float(data)
+        if number.is_integer():
+            return int(number)
+        raise InvalidDataException("Fractional numeric value cannot be converted to int: " + str(data))

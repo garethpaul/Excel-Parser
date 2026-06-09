@@ -66,8 +66,14 @@ class ExcelProcessorTests(unittest.TestCase):
         self.assertEqual(7, processor.convert_type(FakeXlrd.XL_CELL_TEXT, parse.ExcelProcessor.CELL_INT, " 7 "))
         self.assertEqual(7.5, processor.convert_type(FakeXlrd.XL_CELL_TEXT, parse.ExcelProcessor.CELL_FLOAT, " 7.5 "))
         self.assertEqual("3.0", processor.convert_type(FakeXlrd.XL_CELL_NUMBER, parse.ExcelProcessor.CELL_TEXT, 3.0))
-        self.assertEqual(3, processor.convert_type(FakeXlrd.XL_CELL_NUMBER, parse.ExcelProcessor.CELL_INT, 3.9))
+        self.assertEqual(3, processor.convert_type(FakeXlrd.XL_CELL_NUMBER, parse.ExcelProcessor.CELL_INT, 3.0))
         self.assertEqual(3.9, processor.convert_type(FakeXlrd.XL_CELL_NUMBER, parse.ExcelProcessor.CELL_FLOAT, 3.9))
+
+    def test_number_to_int_rejects_fractional_values(self):
+        processor, _fake_xlrd = self.processor([])
+
+        with self.assertRaises(parse.InvalidDataException):
+            processor.convert_type(FakeXlrd.XL_CELL_NUMBER, parse.ExcelProcessor.CELL_INT, 3.9)
 
     def test_date_conversion_is_not_claimed(self):
         processor, _fake_xlrd = self.processor([])

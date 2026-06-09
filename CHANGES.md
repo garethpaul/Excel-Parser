@@ -2,6 +2,7 @@
 
 ## 2026-06-08
 
+- Rejected fractional numeric cells when callers request integer conversion.
 - Made `ExcelProcessor.CELL_EMPTY` an explicit target type for skipped output
   columns.
 - Made `parse.py` importable under Python 3 while preserving the callback API.
