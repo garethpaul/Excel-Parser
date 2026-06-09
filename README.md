@@ -60,6 +60,8 @@ baseline.
   integer, or float conversion.
 - Non-finite numeric values such as `nan` and `inf` are rejected before they
   reach callbacks, including when numeric cells are requested as text.
+- Conversion errors summarize long or multiline values before raising
+  `InvalidDataException`.
 - Date conversion is intentionally unsupported and raises
   `InvalidDataException`.
 
@@ -110,6 +112,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   non-finite numeric-to-text conversion guardrails.
 - See `docs/plans/2026-06-09-text-cell-value-validation.md` for non-string
   text-cell validation.
+- See `docs/plans/2026-06-09-conversion-error-value-summary.md` for bounded
+  conversion error value summaries.
 
 ## Contributing
 

@@ -93,6 +93,28 @@ class ExcelProcessorTests(unittest.TestCase):
         with self.assertRaises(parse.InvalidDataException):
             processor.convert_type(FakeXlrd.XL_CELL_TEXT, parse.ExcelProcessor.CELL_FLOAT, "not-a-number")
 
+    def test_conversion_errors_summarize_long_text_values(self):
+        processor, _fake_xlrd = self.processor([])
+        value = "x" * (parse.MAX_ERROR_VALUE_LENGTH + 20)
+
+        with self.assertRaises(parse.InvalidDataException) as context:
+            processor.convert_type(FakeXlrd.XL_CELL_TEXT, parse.ExcelProcessor.CELL_INT, value)
+
+        message = str(context.exception)
+        self.assertIn(("x" * parse.MAX_ERROR_VALUE_LENGTH) + "...", message)
+        self.assertNotIn(value, message)
+
+    def test_conversion_errors_normalize_multiline_text_values(self):
+        processor, _fake_xlrd = self.processor([])
+
+        with self.assertRaises(parse.InvalidDataException) as context:
+            processor.convert_type(FakeXlrd.XL_CELL_TEXT, parse.ExcelProcessor.CELL_FLOAT, "bad\r\nnext")
+
+        message = str(context.exception)
+        self.assertIn("bad next", message)
+        self.assertNotIn("\r", message)
+        self.assertNotIn("\n", message)
+
     def test_text_conversions_reject_non_string_values_with_parser_exception(self):
         processor, _fake_xlrd = self.processor([])
 

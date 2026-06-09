@@ -2,6 +2,8 @@
 
 ## 2026-06-09
 
+- Summarized long or multiline conversion error values before raising parser
+  exceptions.
 - Rejected non-string text cell values through `InvalidDataException` and
   exposed `make lint`, `make test`, and `make build` gates.
 - Rejected non-finite numeric cells even when callers request text output.

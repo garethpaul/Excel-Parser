@@ -38,6 +38,8 @@ Current baseline:
   attribute errors from conversion helpers.
 - Non-finite numeric values are rejected before callbacks receive them.
 - Numeric cells requested as text are still checked for non-finite values.
+- Conversion errors summarize long or multiline values before caller error
+  handlers receive them.
 - Date conversion remains explicitly unsupported.
 
 Next priorities:

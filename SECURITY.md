@@ -36,6 +36,9 @@ For web services, APIs, sockets, or scraping workflows, prioritize reports invol
 Non-string text cells should fail through `InvalidDataException` before parser
 callbacks receive converted values or raw interpreter errors.
 
+Conversion error messages should summarize long or multiline cell values before
+they reach logs or caller error handlers.
+
 ## Dependency and Supply Chain Security
 
 Dependency updates should come from trusted package managers and should keep lockfiles in sync when lockfiles exist. Do not commit credentials, private keys, tokens, generated secrets, or machine-local configuration. If a vulnerability depends on a compromised package, typosquatting risk, insecure transitive dependency, or unsafe build step, include the package name, affected version, and the path through which it is used.

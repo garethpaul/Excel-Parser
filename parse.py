@@ -21,6 +21,8 @@ try:
 except NameError:
     string_types = (str,)
 
+MAX_ERROR_VALUE_LENGTH = 80
+
 
 class InvalidDataException(Exception):
     pass
@@ -110,17 +112,21 @@ class ExcelProcessor(object):
         number = self.convert_number_to_float(data)
         if number.is_integer():
             return int(number)
-        raise InvalidDataException("Fractional numeric value cannot be converted to int: " + str(data))
+        raise InvalidDataException(
+            "Fractional numeric value cannot be converted to int: " + self.format_error_value(data)
+        )
 
     def convert_number_to_float(self, data):
         number = float(data)
         if math.isnan(number) or math.isinf(number):
-            raise InvalidDataException("Non-finite numeric value cannot be converted to float: " + str(data))
+            raise InvalidDataException(
+                "Non-finite numeric value cannot be converted to float: " + self.format_error_value(data)
+            )
         return number
 
     def clean_text(self, data):
         if not isinstance(data, string_types):
-            raise InvalidDataException("Text cell value must be text: " + str(data))
+            raise InvalidDataException("Text cell value must be text: " + self.format_error_value(data))
         return data.strip()
 
     def convert_text_to_int(self, data):
@@ -130,7 +136,7 @@ class ExcelProcessor(object):
         try:
             return int(value)
         except ValueError:
-            raise InvalidDataException("Text value cannot be converted to int: " + value)
+            raise InvalidDataException("Text value cannot be converted to int: " + self.format_error_value(value))
 
     def convert_text_to_float(self, data):
         value = self.clean_text(data)
@@ -139,4 +145,15 @@ class ExcelProcessor(object):
         try:
             return self.convert_number_to_float(value)
         except ValueError:
-            raise InvalidDataException("Text value cannot be converted to float: " + value)
+            raise InvalidDataException("Text value cannot be converted to float: " + self.format_error_value(value))
+
+    def format_error_value(self, data):
+        try:
+            value = data if isinstance(data, string_types) else str(data)
+        except Exception:
+            return "<unprintable>"
+
+        value = " ".join(value.splitlines())
+        if len(value) > MAX_ERROR_VALUE_LENGTH:
+            return value[:MAX_ERROR_VALUE_LENGTH] + "..."
+        return value
