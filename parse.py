@@ -1,3 +1,6 @@
+import math
+
+
 class _MissingXlrd(object):
     XL_CELL_EMPTY = 0
     XL_CELL_TEXT = 1
@@ -87,7 +90,7 @@ class ExcelProcessor(object):
             elif newtype == ExcelProcessor.CELL_INT:
                 return self.convert_number_to_int(data)
             elif newtype == ExcelProcessor.CELL_FLOAT:
-                return float(data)
+                return self.convert_number_to_float(data)
             elif newtype == ExcelProcessor.CELL_DATE:
                 raise InvalidDataException("Conversion to Date Type not supported")
             else:
@@ -98,10 +101,16 @@ class ExcelProcessor(object):
             raise InvalidDataException("Invalid source datatype : " + str(curtype))
 
     def convert_number_to_int(self, data):
-        number = float(data)
+        number = self.convert_number_to_float(data)
         if number.is_integer():
             return int(number)
         raise InvalidDataException("Fractional numeric value cannot be converted to int: " + str(data))
+
+    def convert_number_to_float(self, data):
+        number = float(data)
+        if math.isnan(number) or math.isinf(number):
+            raise InvalidDataException("Non-finite numeric value cannot be converted to float: " + str(data))
+        return number
 
     def convert_text_to_int(self, data):
         value = data.strip()
@@ -117,6 +126,6 @@ class ExcelProcessor(object):
         if value == "":
             raise InvalidDataException("Empty text value cannot be converted to float")
         try:
-            return float(value)
+            return self.convert_number_to_float(value)
         except ValueError:
             raise InvalidDataException("Text value cannot be converted to float: " + value)

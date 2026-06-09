@@ -56,6 +56,8 @@ baseline.
   fractional numbers raise `InvalidDataException` instead of being truncated.
 - Text cells requested as numeric targets reject blank or malformed text with
   `InvalidDataException`.
+- Non-finite numeric values such as `nan` and `inf` are rejected before they
+  reach callbacks.
 - Date conversion is intentionally unsupported and raises
   `InvalidDataException`.
 
@@ -95,6 +97,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   integer-conversion guardrails.
 - See `docs/plans/2026-06-09-text-number-conversion-errors.md` for
   text-to-number conversion error guardrails.
+- See `docs/plans/2026-06-09-non-finite-number-conversion.md` for non-finite
+  numeric conversion guardrails.
 
 ## Contributing
 

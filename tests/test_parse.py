@@ -93,6 +93,20 @@ class ExcelProcessorTests(unittest.TestCase):
         with self.assertRaises(parse.InvalidDataException):
             processor.convert_type(FakeXlrd.XL_CELL_TEXT, parse.ExcelProcessor.CELL_FLOAT, "not-a-number")
 
+    def test_non_finite_number_conversion_is_rejected(self):
+        processor, _fake_xlrd = self.processor([])
+
+        for value in [float("nan"), float("inf"), float("-inf")]:
+            with self.assertRaises(parse.InvalidDataException):
+                processor.convert_type(FakeXlrd.XL_CELL_NUMBER, parse.ExcelProcessor.CELL_FLOAT, value)
+
+            with self.assertRaises(parse.InvalidDataException):
+                processor.convert_type(FakeXlrd.XL_CELL_NUMBER, parse.ExcelProcessor.CELL_INT, value)
+
+        for value in ["nan", "inf", "-inf"]:
+            with self.assertRaises(parse.InvalidDataException):
+                processor.convert_type(FakeXlrd.XL_CELL_TEXT, parse.ExcelProcessor.CELL_FLOAT, value)
+
     def test_date_conversion_is_not_claimed(self):
         processor, _fake_xlrd = self.processor([])
 
