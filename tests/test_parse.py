@@ -60,6 +60,8 @@ class ExcelProcessorTests(unittest.TestCase):
     def test_convert_type_handles_text_and_number_targets(self):
         processor, _fake_xlrd = self.processor([])
 
+        self.assertIsNone(processor.convert_type(FakeXlrd.XL_CELL_TEXT, parse.ExcelProcessor.CELL_EMPTY, " Gareth "))
+        self.assertIsNone(processor.convert_type(FakeXlrd.XL_CELL_NUMBER, parse.ExcelProcessor.CELL_EMPTY, 3.0))
         self.assertEqual("Gareth", processor.convert_type(FakeXlrd.XL_CELL_TEXT, parse.ExcelProcessor.CELL_TEXT, " Gareth "))
         self.assertEqual(7, processor.convert_type(FakeXlrd.XL_CELL_TEXT, parse.ExcelProcessor.CELL_INT, " 7 "))
         self.assertEqual(7.5, processor.convert_type(FakeXlrd.XL_CELL_TEXT, parse.ExcelProcessor.CELL_FLOAT, " 7.5 "))
@@ -105,6 +107,27 @@ class ExcelProcessorTests(unittest.TestCase):
             (3, [None, 3]),
         ], received)
         self.assertEqual([True], done)
+
+    def test_process_allows_cell_empty_targets_to_skip_present_values(self):
+        rows = [
+            [(FakeXlrd.XL_CELL_TEXT, "skip"), (FakeXlrd.XL_CELL_TEXT, " Keep ")],
+            [(FakeXlrd.XL_CELL_NUMBER, 3.0), (FakeXlrd.XL_CELL_TEXT, "Also keep")],
+        ]
+        received = []
+        processor, _fake_xlrd = self.processor(
+            rows,
+            lambda rowid, values: received.append((rowid, values)),
+        )
+
+        processor.process("fixture.xls", "People", False, [
+            parse.ExcelProcessor.CELL_EMPTY,
+            parse.ExcelProcessor.CELL_TEXT,
+        ])
+
+        self.assertEqual([
+            (0, [None, "Keep"]),
+            (1, [None, "Also keep"]),
+        ], received)
 
     def test_exception_callback_receives_row_errors_and_processing_continues(self):
         rows = [

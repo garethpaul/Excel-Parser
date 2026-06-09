@@ -2,6 +2,8 @@
 
 ## 2026-06-08
 
+- Made `ExcelProcessor.CELL_EMPTY` an explicit target type for skipped output
+  columns.
 - Made `parse.py` importable under Python 3 while preserving the callback API.
 - Added fake-workbook unit tests for type conversion, header skipping, missing
   cells, completion callbacks, and row-level exception callbacks.

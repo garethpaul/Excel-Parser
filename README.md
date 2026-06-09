@@ -50,6 +50,8 @@ baseline.
   from `parse.py`.
 - Call `process(path, sheet_name, has_header, cell_types)` with target cell
   types such as `ExcelProcessor.CELL_TEXT`, `CELL_INT`, and `CELL_FLOAT`.
+- Use `ExcelProcessor.CELL_EMPTY` in `cell_types` to ignore a present source
+  cell and receive `None` for that output position.
 - Date conversion is intentionally unsupported and raises
   `InvalidDataException`.
 

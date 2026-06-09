@@ -65,6 +65,7 @@ fi
 if grep -Fq "except Exception," "$ROOT_DIR/parse.py" ||
   ! grep -Fq "_MissingXlrd" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "cell_types=None" "$ROOT_DIR/parse.py" ||
+  ! grep -Fq "newtype == ExcelProcessor.CELL_EMPTY" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "except Exception as exc" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "on_demand=True" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "release_resources" "$ROOT_DIR/parse.py"; then
@@ -74,6 +75,7 @@ fi
 
 if ! grep -Fq "FakeXlrd" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_process_skips_header_and_handles_missing_cells" "$ROOT_DIR/tests/test_parse.py" ||
+  ! grep -Fq "test_process_allows_cell_empty_targets_to_skip_present_values" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_exception_callback_receives_row_errors_and_processing_continues" "$ROOT_DIR/tests/test_parse.py"; then
   printf '%s\n' "Offline tests must cover fake-workbook processing and callback error behavior." >&2
   exit 1

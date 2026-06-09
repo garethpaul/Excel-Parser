@@ -66,6 +66,9 @@ class ExcelProcessor(object):
                 release_resources()
 
     def convert_type(self, curtype, newtype, data):
+        if newtype == ExcelProcessor.CELL_EMPTY:
+            return None
+
         if curtype == xlrd.XL_CELL_TEXT:
             if newtype == ExcelProcessor.CELL_TEXT:
                 return data.strip()
