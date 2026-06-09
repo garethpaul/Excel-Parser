@@ -2,6 +2,7 @@
 
 ## 2026-06-09
 
+- Validated target cell type declarations before opening workbook files.
 - Summarized long, multiline, or unprintable conversion error values before
   raising parser exceptions.
 - Rejected non-string text cell values through `InvalidDataException` and

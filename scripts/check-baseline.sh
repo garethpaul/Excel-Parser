@@ -7,6 +7,7 @@ NONFINITE_PLAN="$ROOT_DIR/docs/plans/2026-06-09-non-finite-number-conversion.md"
 NONFINITE_TEXT_PLAN="$ROOT_DIR/docs/plans/2026-06-09-non-finite-number-text-conversion.md"
 TEXT_VALUE_PLAN="$ROOT_DIR/docs/plans/2026-06-09-text-cell-value-validation.md"
 ERROR_SUMMARY_PLAN="$ROOT_DIR/docs/plans/2026-06-09-conversion-error-value-summary.md"
+TARGET_TYPES_PLAN="$ROOT_DIR/docs/plans/2026-06-09-target-cell-type-validation.md"
 
 cleanup_bytecode() {
   find "$ROOT_DIR" -maxdepth 3 -type d -name "__pycache__" -prune -exec rm -rf {} + 2>/dev/null || true
@@ -38,6 +39,7 @@ for path in \
   "docs/plans/2026-06-09-non-finite-number-text-conversion.md" \
   "docs/plans/2026-06-09-text-cell-value-validation.md" \
   "docs/plans/2026-06-09-conversion-error-value-summary.md" \
+  "docs/plans/2026-06-09-target-cell-type-validation.md" \
   "docs/plans/2026-06-08-fractional-int-conversion.md" \
   "docs/plans/2026-06-08-excel-parser-maintenance-baseline.md"; do
   require_file "$path"
@@ -77,11 +79,17 @@ if ! grep -Fq "Conversion errors summarize long, multiline, or unprintable value
   exit 1
 fi
 
+if ! grep -Fq "Target cell type declarations are validated before opening workbooks" "$ROOT_DIR/README.md"; then
+  printf '%s\n' "README must document target cell type validation before workbook access." >&2
+  exit 1
+fi
+
 if ! grep -Fq "scripts/check-baseline.sh" "$ROOT_DIR/VISION.md" ||
   ! grep -Fq "fake workbook" "$ROOT_DIR/VISION.md" ||
   ! grep -Fq "date conversion" "$ROOT_DIR/VISION.md" ||
   ! grep -Fq "Fractional numeric cells" "$ROOT_DIR/VISION.md" ||
   ! grep -Fq "Conversion errors summarize" "$ROOT_DIR/VISION.md" ||
+  ! grep -Fq "Target cell type declarations" "$ROOT_DIR/VISION.md" ||
   ! grep -Fq "Non-string text cells" "$ROOT_DIR/VISION.md"; then
   printf '%s\n' "VISION must describe the current parser baseline and date-conversion boundary." >&2
   exit 1
@@ -97,10 +105,18 @@ if ! grep -Fq "Conversion error messages should summarize" "$ROOT_DIR/SECURITY.m
   exit 1
 fi
 
+if ! grep -Fq "Target cell type declarations should be validated before opening workbook files" "$ROOT_DIR/SECURITY.md"; then
+  printf '%s\n' "SECURITY must document target cell type validation before workbook access." >&2
+  exit 1
+fi
+
 if grep -Fq "except Exception," "$ROOT_DIR/parse.py" ||
   ! grep -Fq "_MissingXlrd" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "string_types" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "MAX_ERROR_VALUE_LENGTH" "$ROOT_DIR/parse.py" ||
+  ! grep -Fq "VALID_CELL_TYPES" "$ROOT_DIR/parse.py" ||
+  ! grep -Fq "def validate_cell_types" "$ROOT_DIR/parse.py" ||
+  ! grep -Fq "cell_types = self.validate_cell_types(cell_types)" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "def format_error_value" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "value.splitlines()" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "cell_types=None" "$ROOT_DIR/parse.py" ||
@@ -135,6 +151,7 @@ if ! grep -Fq "FakeXlrd" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_conversion_errors_handle_unprintable_values" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_non_finite_number_conversion_is_rejected" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "CELL_TEXT, value" "$ROOT_DIR/tests/test_parse.py" ||
+  ! grep -Fq "test_process_rejects_invalid_target_types_before_opening_workbook" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_exception_callback_receives_row_errors_and_processing_continues" "$ROOT_DIR/tests/test_parse.py"; then
   printf '%s\n' "Offline tests must cover fake-workbook processing and callback error behavior." >&2
   exit 1
@@ -148,6 +165,7 @@ if ! grep -Fq "fractional numeric" "$ROOT_DIR/CHANGES.md" ||
   ! grep -Fq "status: completed" "$NONFINITE_PLAN" ||
   ! grep -Fq "status: completed" "$NONFINITE_TEXT_PLAN" ||
   ! grep -Fq "status: completed" "$TEXT_VALUE_PLAN" ||
+  ! grep -Fq "status: completed" "$TARGET_TYPES_PLAN" ||
   ! grep -Fq "status: completed" "$ERROR_SUMMARY_PLAN"; then
   printf '%s\n' "Fractional integer conversion guard must be documented and planned." >&2
   exit 1
@@ -165,6 +183,11 @@ fi
 
 if ! grep -Fq "make check" "$ERROR_SUMMARY_PLAN"; then
   printf '%s\n' "Conversion error value summary plan must record make check verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "make check" "$TARGET_TYPES_PLAN"; then
+  printf '%s\n' "Target cell type validation plan must record make check verification." >&2
   exit 1
 fi
 

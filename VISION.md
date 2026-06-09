@@ -40,6 +40,7 @@ Current baseline:
 - Numeric cells requested as text are still checked for non-finite values.
 - Conversion errors summarize long, multiline, or unprintable values before caller error
   handlers receive them.
+- Target cell type declarations fail fast before workbook files are opened.
 - Date conversion remains explicitly unsupported.
 
 Next priorities:

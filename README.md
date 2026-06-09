@@ -52,6 +52,8 @@ baseline.
   types such as `ExcelProcessor.CELL_TEXT`, `CELL_INT`, and `CELL_FLOAT`.
 - Use `ExcelProcessor.CELL_EMPTY` in `cell_types` to ignore a present source
   cell and receive `None` for that output position.
+- Target cell type declarations are validated before opening workbooks, so
+  invalid output schemas fail before file resources are touched.
 - Numeric cells convert to `CELL_INT` only when the value is integer-valued;
   fractional numbers raise `InvalidDataException` instead of being truncated.
 - Text cells requested as numeric targets reject blank or malformed text with
@@ -114,6 +116,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   text-cell validation.
 - See `docs/plans/2026-06-09-conversion-error-value-summary.md` for bounded
   conversion error value summaries.
+- See `docs/plans/2026-06-09-target-cell-type-validation.md` for target cell
+  type validation before workbook access.
 
 ## Contributing
 

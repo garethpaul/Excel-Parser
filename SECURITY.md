@@ -39,6 +39,9 @@ callbacks receive converted values or raw interpreter errors.
 Conversion error messages should summarize long, multiline, or unprintable cell
 values before they reach logs or caller error handlers.
 
+Target cell type declarations should be validated before opening workbook files
+so invalid schemas do not touch parser file resources.
+
 ## Dependency and Supply Chain Security
 
 Dependency updates should come from trusted package managers and should keep lockfiles in sync when lockfiles exist. Do not commit credentials, private keys, tokens, generated secrets, or machine-local configuration. If a vulnerability depends on a compromised package, typosquatting risk, insecure transitive dependency, or unsafe build step, include the package name, affected version, and the path through which it is used.

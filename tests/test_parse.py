@@ -220,6 +220,14 @@ class ExcelProcessorTests(unittest.TestCase):
             (1, [None, "Also keep"]),
         ], received)
 
+    def test_process_rejects_invalid_target_types_before_opening_workbook(self):
+        processor, fake_xlrd = self.processor([])
+
+        with self.assertRaises(parse.InvalidDataException):
+            processor.process("fixture.xls", "People", False, [parse.ExcelProcessor.CELL_TEXT, 99])
+
+        self.assertEqual([], fake_xlrd.opened)
+
     def test_exception_callback_receives_row_errors_and_processing_continues(self):
         rows = [
             [(FakeXlrd.XL_CELL_TEXT, "Count")],

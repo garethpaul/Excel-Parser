@@ -34,6 +34,7 @@ class ExcelProcessor(object):
     CELL_INT = 2
     CELL_FLOAT = 3
     CELL_DATE = 4
+    VALID_CELL_TYPES = (CELL_EMPTY, CELL_TEXT, CELL_INT, CELL_FLOAT, CELL_DATE)
 
     def __init__(self, rowdatacallback, parsedonecallback, exceptioncallback=None):
         self.rowdatacallback = rowdatacallback
@@ -41,8 +42,7 @@ class ExcelProcessor(object):
         self.exceptioncallback = exceptioncallback
 
     def process(self, excel, sheet_name, has_header, cell_types=None):
-        if cell_types is None:
-            cell_types = []
+        cell_types = self.validate_cell_types(cell_types)
 
         book = xlrd.open_workbook(excel, on_demand=True)
         try:
@@ -107,6 +107,20 @@ class ExcelProcessor(object):
             raise InvalidDataException("Conversion from Date Type not supported")
         else:
             raise InvalidDataException("Invalid source datatype : " + str(curtype))
+
+    def validate_cell_types(self, cell_types):
+        if cell_types is None:
+            return []
+
+        try:
+            normalized = list(cell_types)
+        except TypeError:
+            raise InvalidDataException("Target cell types must be iterable")
+
+        for cell_type in normalized:
+            if cell_type not in self.VALID_CELL_TYPES:
+                raise InvalidDataException("Invalid target datatype:" + self.format_error_value(cell_type))
+        return normalized
 
     def convert_number_to_int(self, data):
         number = self.convert_number_to_float(data)
