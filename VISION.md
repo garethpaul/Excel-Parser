@@ -41,6 +41,8 @@ Current baseline:
 - Conversion errors summarize long, multiline, or unprintable values before caller error
   handlers receive them.
 - Target cell type declarations fail fast before workbook files are opened.
+- Workbook paths are validated before workbook files are opened and remain scoped
+  to non-empty `.xls` paths.
 - Date conversion remains explicitly unsupported.
 
 Next priorities:

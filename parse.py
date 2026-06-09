@@ -43,6 +43,7 @@ class ExcelProcessor(object):
 
     def process(self, excel, sheet_name, has_header, cell_types=None):
         cell_types = self.validate_cell_types(cell_types)
+        excel = self.validate_workbook_path(excel)
 
         book = xlrd.open_workbook(excel, on_demand=True)
         try:
@@ -121,6 +122,13 @@ class ExcelProcessor(object):
             if cell_type not in self.VALID_CELL_TYPES:
                 raise InvalidDataException("Invalid target datatype:" + self.format_error_value(cell_type))
         return normalized
+
+    def validate_workbook_path(self, excel):
+        if not isinstance(excel, string_types) or not excel.strip():
+            raise InvalidDataException("Workbook path must be a non-empty .xls path")
+        if not excel.lower().endswith(".xls"):
+            raise InvalidDataException("Workbook path must end with .xls")
+        return excel
 
     def convert_number_to_int(self, data):
         number = self.convert_number_to_float(data)

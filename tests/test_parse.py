@@ -228,6 +228,22 @@ class ExcelProcessorTests(unittest.TestCase):
 
         self.assertEqual([], fake_xlrd.opened)
 
+    def test_process_rejects_non_xls_workbook_path_before_opening_workbook(self):
+        processor, fake_xlrd = self.processor([])
+
+        with self.assertRaises(parse.InvalidDataException):
+            processor.process("fixture.xlsx", "People", False, [parse.ExcelProcessor.CELL_TEXT])
+
+        self.assertEqual([], fake_xlrd.opened)
+
+    def test_process_rejects_blank_workbook_path_before_opening_workbook(self):
+        processor, fake_xlrd = self.processor([])
+
+        with self.assertRaises(parse.InvalidDataException):
+            processor.process("  ", "People", False, [parse.ExcelProcessor.CELL_TEXT])
+
+        self.assertEqual([], fake_xlrd.opened)
+
     def test_exception_callback_receives_row_errors_and_processing_continues(self):
         rows = [
             [(FakeXlrd.XL_CELL_TEXT, "Count")],

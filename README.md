@@ -54,6 +54,8 @@ baseline.
   cell and receive `None` for that output position.
 - Target cell type declarations are validated before opening workbooks, so
   invalid output schemas fail before file resources are touched.
+- Workbook paths are validated as non-empty .xls paths before opening files,
+  matching the documented `xlrd` 2.x `.xls` boundary.
 - Numeric cells convert to `CELL_INT` only when the value is integer-valued;
   fractional numbers raise `InvalidDataException` instead of being truncated.
 - Text cells requested as numeric targets reject blank or malformed text with
@@ -118,6 +120,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   conversion error value summaries.
 - See `docs/plans/2026-06-09-target-cell-type-validation.md` for target cell
   type validation before workbook access.
+- See `docs/plans/2026-06-09-workbook-path-validation.md` for workbook path
+  validation before workbook access.
 
 ## Contributing
 
