@@ -60,7 +60,7 @@ baseline.
   integer, or float conversion.
 - Non-finite numeric values such as `nan` and `inf` are rejected before they
   reach callbacks, including when numeric cells are requested as text.
-- Conversion errors summarize long or multiline values before raising
+- Conversion errors summarize long, multiline, or unprintable values before raising
   `InvalidDataException`.
 - Date conversion is intentionally unsupported and raises
   `InvalidDataException`.

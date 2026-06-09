@@ -43,6 +43,11 @@ class FakeXlrd(object):
         return book
 
 
+class UnprintableValue(object):
+    def __str__(self):
+        raise RuntimeError("cannot stringify value")
+
+
 class ExcelProcessorTests(unittest.TestCase):
     def setUp(self):
         self.original_xlrd = parse.xlrd
@@ -114,6 +119,18 @@ class ExcelProcessorTests(unittest.TestCase):
         self.assertIn("bad next", message)
         self.assertNotIn("\r", message)
         self.assertNotIn("\n", message)
+
+    def test_conversion_errors_handle_unprintable_values(self):
+        processor, _fake_xlrd = self.processor([])
+
+        with self.assertRaises(parse.InvalidDataException) as context:
+            processor.convert_type(
+                FakeXlrd.XL_CELL_TEXT,
+                parse.ExcelProcessor.CELL_TEXT,
+                UnprintableValue(),
+            )
+
+        self.assertIn("<unprintable>", str(context.exception))
 
     def test_text_conversions_reject_non_string_values_with_parser_exception(self):
         processor, _fake_xlrd = self.processor([])

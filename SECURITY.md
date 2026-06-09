@@ -36,8 +36,8 @@ For web services, APIs, sockets, or scraping workflows, prioritize reports invol
 Non-string text cells should fail through `InvalidDataException` before parser
 callbacks receive converted values or raw interpreter errors.
 
-Conversion error messages should summarize long or multiline cell values before
-they reach logs or caller error handlers.
+Conversion error messages should summarize long, multiline, or unprintable cell
+values before they reach logs or caller error handlers.
 
 ## Dependency and Supply Chain Security
 

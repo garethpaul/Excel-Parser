@@ -13,6 +13,7 @@ more private data than needed into logs or caller error handlers.
 - Preserve the existing callback API and `InvalidDataException` error type.
 - Keep conversion error messages useful without dumping complete long values.
 - Collapse multiline values before they appear in exception text.
+- Fall back to a placeholder for values that cannot be stringified.
 - Extend offline tests and the baseline so the formatter remains visible.
 
 ## Work Completed
@@ -21,7 +22,8 @@ more private data than needed into logs or caller error handlers.
   value summaries.
 - Routed numeric, text, and non-string value conversion errors through the
   formatter.
-- Added tests for long-value truncation and multiline normalization.
+- Added tests for long-value truncation, multiline normalization, and
+  unprintable-value fallback.
 - Extended `scripts/check-baseline.sh` to require the formatter, tests, docs,
   and completed plan.
 - Documented the conversion error summary behavior in README, SECURITY, VISION,

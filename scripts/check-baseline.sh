@@ -72,7 +72,7 @@ if ! grep -Fq "non-string text cells" "$ROOT_DIR/README.md"; then
   exit 1
 fi
 
-if ! grep -Fq "Conversion errors summarize long or multiline values" "$ROOT_DIR/README.md"; then
+if ! grep -Fq "Conversion errors summarize long, multiline, or unprintable values" "$ROOT_DIR/README.md"; then
   printf '%s\n' "README must document conversion error value summaries." >&2
   exit 1
 fi
@@ -132,6 +132,7 @@ if ! grep -Fq "FakeXlrd" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_text_conversions_reject_non_string_values_with_parser_exception" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_conversion_errors_summarize_long_text_values" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_conversion_errors_normalize_multiline_text_values" "$ROOT_DIR/tests/test_parse.py" ||
+  ! grep -Fq "test_conversion_errors_handle_unprintable_values" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_non_finite_number_conversion_is_rejected" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "CELL_TEXT, value" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_exception_callback_receives_row_errors_and_processing_continues" "$ROOT_DIR/tests/test_parse.py"; then
