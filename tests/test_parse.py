@@ -98,6 +98,9 @@ class ExcelProcessorTests(unittest.TestCase):
 
         for value in [float("nan"), float("inf"), float("-inf")]:
             with self.assertRaises(parse.InvalidDataException):
+                processor.convert_type(FakeXlrd.XL_CELL_NUMBER, parse.ExcelProcessor.CELL_TEXT, value)
+
+            with self.assertRaises(parse.InvalidDataException):
                 processor.convert_type(FakeXlrd.XL_CELL_NUMBER, parse.ExcelProcessor.CELL_FLOAT, value)
 
             with self.assertRaises(parse.InvalidDataException):

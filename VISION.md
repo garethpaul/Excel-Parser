@@ -35,6 +35,7 @@ Current baseline:
 - Blank or malformed text cells requested as numeric targets raise
   `InvalidDataException` instead of leaking raw Python conversion errors.
 - Non-finite numeric values are rejected before callbacks receive them.
+- Numeric cells requested as text are still checked for non-finite values.
 - Date conversion remains explicitly unsupported.
 
 Next priorities:

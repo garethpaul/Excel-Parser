@@ -2,6 +2,7 @@
 
 ## 2026-06-09
 
+- Rejected non-finite numeric cells even when callers request text output.
 - Rejected non-finite numeric conversions such as `nan` and `inf`.
 - Routed text-to-number conversion failures through `InvalidDataException` for
   blank and malformed text cells.

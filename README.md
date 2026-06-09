@@ -57,7 +57,7 @@ baseline.
 - Text cells requested as numeric targets reject blank or malformed text with
   `InvalidDataException`.
 - Non-finite numeric values such as `nan` and `inf` are rejected before they
-  reach callbacks.
+  reach callbacks, including when numeric cells are requested as text.
 - Date conversion is intentionally unsupported and raises
   `InvalidDataException`.
 
@@ -99,6 +99,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   text-to-number conversion error guardrails.
 - See `docs/plans/2026-06-09-non-finite-number-conversion.md` for non-finite
   numeric conversion guardrails.
+- See `docs/plans/2026-06-09-non-finite-number-text-conversion.md` for
+  non-finite numeric-to-text conversion guardrails.
 
 ## Contributing
 

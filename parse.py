@@ -86,6 +86,7 @@ class ExcelProcessor(object):
 
         elif curtype == xlrd.XL_CELL_NUMBER:
             if newtype == ExcelProcessor.CELL_TEXT:
+                self.convert_number_to_float(data)
                 return str(data)
             elif newtype == ExcelProcessor.CELL_INT:
                 return self.convert_number_to_int(data)

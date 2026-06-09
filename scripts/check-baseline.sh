@@ -4,6 +4,7 @@ set -eu
 ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 PLAN="$ROOT_DIR/docs/plans/2026-06-08-excel-parser-maintenance-baseline.md"
 NONFINITE_PLAN="$ROOT_DIR/docs/plans/2026-06-09-non-finite-number-conversion.md"
+NONFINITE_TEXT_PLAN="$ROOT_DIR/docs/plans/2026-06-09-non-finite-number-text-conversion.md"
 
 cleanup_bytecode() {
   find "$ROOT_DIR" -maxdepth 3 -type d -name "__pycache__" -prune -exec rm -rf {} + 2>/dev/null || true
@@ -32,6 +33,7 @@ for path in \
   "tests/test_parse.py" \
   "docs/plans/2026-06-09-text-number-conversion-errors.md" \
   "docs/plans/2026-06-09-non-finite-number-conversion.md" \
+  "docs/plans/2026-06-09-non-finite-number-text-conversion.md" \
   "docs/plans/2026-06-08-fractional-int-conversion.md" \
   "docs/plans/2026-06-08-excel-parser-maintenance-baseline.md"; do
   require_file "$path"
@@ -76,6 +78,7 @@ if grep -Fq "except Exception," "$ROOT_DIR/parse.py" ||
   ! grep -Fq "def convert_number_to_float" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "def convert_text_to_int" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "def convert_text_to_float" "$ROOT_DIR/parse.py" ||
+  ! grep -Fq "self.convert_number_to_float(data)" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "math.isnan(number)" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "math.isinf(number)" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "number.is_integer()" "$ROOT_DIR/parse.py" ||
@@ -95,6 +98,7 @@ if ! grep -Fq "FakeXlrd" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_text_to_number_rejects_blank_values_with_parser_exception" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_text_to_number_rejects_invalid_values_with_parser_exception" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_non_finite_number_conversion_is_rejected" "$ROOT_DIR/tests/test_parse.py" ||
+  ! grep -Fq "CELL_TEXT, value" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_exception_callback_receives_row_errors_and_processing_continues" "$ROOT_DIR/tests/test_parse.py"; then
   printf '%s\n' "Offline tests must cover fake-workbook processing and callback error behavior." >&2
   exit 1
@@ -105,8 +109,14 @@ if ! grep -Fq "fractional numeric" "$ROOT_DIR/CHANGES.md" ||
   ! grep -Fq "non-finite" "$ROOT_DIR/CHANGES.md" ||
   ! grep -Fq "status: completed" "$ROOT_DIR/docs/plans/2026-06-08-fractional-int-conversion.md" ||
   ! grep -Fq "status: completed" "$ROOT_DIR/docs/plans/2026-06-09-text-number-conversion-errors.md" ||
-  ! grep -Fq "status: completed" "$NONFINITE_PLAN"; then
+  ! grep -Fq "status: completed" "$NONFINITE_PLAN" ||
+  ! grep -Fq "status: completed" "$NONFINITE_TEXT_PLAN"; then
   printf '%s\n' "Fractional integer conversion guard must be documented and planned." >&2
+  exit 1
+fi
+
+if ! grep -Fq "make check" "$NONFINITE_TEXT_PLAN"; then
+  printf '%s\n' "Non-finite numeric-to-text plan must record make check verification." >&2
   exit 1
 fi
 
