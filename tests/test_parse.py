@@ -75,6 +75,24 @@ class ExcelProcessorTests(unittest.TestCase):
         with self.assertRaises(parse.InvalidDataException):
             processor.convert_type(FakeXlrd.XL_CELL_NUMBER, parse.ExcelProcessor.CELL_INT, 3.9)
 
+    def test_text_to_number_rejects_blank_values_with_parser_exception(self):
+        processor, _fake_xlrd = self.processor([])
+
+        with self.assertRaises(parse.InvalidDataException):
+            processor.convert_type(FakeXlrd.XL_CELL_TEXT, parse.ExcelProcessor.CELL_INT, "  ")
+
+        with self.assertRaises(parse.InvalidDataException):
+            processor.convert_type(FakeXlrd.XL_CELL_TEXT, parse.ExcelProcessor.CELL_FLOAT, "")
+
+    def test_text_to_number_rejects_invalid_values_with_parser_exception(self):
+        processor, _fake_xlrd = self.processor([])
+
+        with self.assertRaises(parse.InvalidDataException):
+            processor.convert_type(FakeXlrd.XL_CELL_TEXT, parse.ExcelProcessor.CELL_INT, "not-a-number")
+
+        with self.assertRaises(parse.InvalidDataException):
+            processor.convert_type(FakeXlrd.XL_CELL_TEXT, parse.ExcelProcessor.CELL_FLOAT, "not-a-number")
+
     def test_date_conversion_is_not_claimed(self):
         processor, _fake_xlrd = self.processor([])
 
@@ -156,7 +174,7 @@ class ExcelProcessorTests(unittest.TestCase):
         self.assertEqual([(2, [4])], received)
         self.assertEqual(1, len(errors))
         self.assertEqual(1, errors[0][0])
-        self.assertIsInstance(errors[0][1], ValueError)
+        self.assertIsInstance(errors[0][1], parse.InvalidDataException)
         self.assertEqual([True], done)
 
 

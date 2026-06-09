@@ -54,6 +54,8 @@ baseline.
   cell and receive `None` for that output position.
 - Numeric cells convert to `CELL_INT` only when the value is integer-valued;
   fractional numbers raise `InvalidDataException` instead of being truncated.
+- Text cells requested as numeric targets reject blank or malformed text with
+  `InvalidDataException`.
 - Date conversion is intentionally unsupported and raises
   `InvalidDataException`.
 
@@ -91,6 +93,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   current parser maintenance baseline.
 - See `docs/plans/2026-06-08-fractional-int-conversion.md` for numeric
   integer-conversion guardrails.
+- See `docs/plans/2026-06-09-text-number-conversion-errors.md` for
+  text-to-number conversion error guardrails.
 
 ## Contributing
 

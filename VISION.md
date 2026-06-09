@@ -32,6 +32,8 @@ Current baseline:
   coverage without private spreadsheet fixtures.
 - Fractional numeric cells requested as integers raise `InvalidDataException`
   instead of being truncated.
+- Blank or malformed text cells requested as numeric targets raise
+  `InvalidDataException` instead of leaking raw Python conversion errors.
 - Date conversion remains explicitly unsupported.
 
 Next priorities:

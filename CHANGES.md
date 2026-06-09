@@ -1,5 +1,11 @@
 # Changes
 
+## 2026-06-09
+
+- Routed text-to-number conversion failures through `InvalidDataException` for
+  blank and malformed text cells.
+- Added unit and baseline coverage for invalid text integer/float conversion.
+
 ## 2026-06-08
 
 - Rejected fractional numeric cells when callers request integer conversion.

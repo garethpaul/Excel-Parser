@@ -29,6 +29,7 @@ for path in \
   "parse.py" \
   "requirements.txt" \
   "tests/test_parse.py" \
+  "docs/plans/2026-06-09-text-number-conversion-errors.md" \
   "docs/plans/2026-06-08-fractional-int-conversion.md" \
   "docs/plans/2026-06-08-excel-parser-maintenance-baseline.md"; do
   require_file "$path"
@@ -70,7 +71,11 @@ if grep -Fq "except Exception," "$ROOT_DIR/parse.py" ||
   ! grep -Fq "cell_types=None" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "newtype == ExcelProcessor.CELL_EMPTY" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "def convert_number_to_int" "$ROOT_DIR/parse.py" ||
+  ! grep -Fq "def convert_text_to_int" "$ROOT_DIR/parse.py" ||
+  ! grep -Fq "def convert_text_to_float" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "number.is_integer()" "$ROOT_DIR/parse.py" ||
+  ! grep -Fq "Empty text value cannot be converted to int" "$ROOT_DIR/parse.py" ||
+  ! grep -Fq "Text value cannot be converted to float" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "except Exception as exc" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "on_demand=True" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "release_resources" "$ROOT_DIR/parse.py"; then
@@ -82,13 +87,17 @@ if ! grep -Fq "FakeXlrd" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_process_skips_header_and_handles_missing_cells" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_process_allows_cell_empty_targets_to_skip_present_values" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_number_to_int_rejects_fractional_values" "$ROOT_DIR/tests/test_parse.py" ||
+  ! grep -Fq "test_text_to_number_rejects_blank_values_with_parser_exception" "$ROOT_DIR/tests/test_parse.py" ||
+  ! grep -Fq "test_text_to_number_rejects_invalid_values_with_parser_exception" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_exception_callback_receives_row_errors_and_processing_continues" "$ROOT_DIR/tests/test_parse.py"; then
   printf '%s\n' "Offline tests must cover fake-workbook processing and callback error behavior." >&2
   exit 1
 fi
 
 if ! grep -Fq "fractional numeric" "$ROOT_DIR/CHANGES.md" ||
-  ! grep -Fq "status: completed" "$ROOT_DIR/docs/plans/2026-06-08-fractional-int-conversion.md"; then
+  ! grep -Fq "text-to-number" "$ROOT_DIR/CHANGES.md" ||
+  ! grep -Fq "status: completed" "$ROOT_DIR/docs/plans/2026-06-08-fractional-int-conversion.md" ||
+  ! grep -Fq "status: completed" "$ROOT_DIR/docs/plans/2026-06-09-text-number-conversion-errors.md"; then
   printf '%s\n' "Fractional integer conversion guard must be documented and planned." >&2
   exit 1
 fi

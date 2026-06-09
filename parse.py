@@ -73,9 +73,9 @@ class ExcelProcessor(object):
             if newtype == ExcelProcessor.CELL_TEXT:
                 return data.strip()
             elif newtype == ExcelProcessor.CELL_INT:
-                return int(data.strip())
+                return self.convert_text_to_int(data)
             elif newtype == ExcelProcessor.CELL_FLOAT:
-                return float(data.strip())
+                return self.convert_text_to_float(data)
             elif newtype == ExcelProcessor.CELL_DATE:
                 raise InvalidDataException("Conversion to Date Type not supported")
             else:
@@ -102,3 +102,21 @@ class ExcelProcessor(object):
         if number.is_integer():
             return int(number)
         raise InvalidDataException("Fractional numeric value cannot be converted to int: " + str(data))
+
+    def convert_text_to_int(self, data):
+        value = data.strip()
+        if value == "":
+            raise InvalidDataException("Empty text value cannot be converted to int")
+        try:
+            return int(value)
+        except ValueError:
+            raise InvalidDataException("Text value cannot be converted to int: " + value)
+
+    def convert_text_to_float(self, data):
+        value = data.strip()
+        if value == "":
+            raise InvalidDataException("Empty text value cannot be converted to float")
+        try:
+            return float(value)
+        except ValueError:
+            raise InvalidDataException("Text value cannot be converted to float: " + value)
