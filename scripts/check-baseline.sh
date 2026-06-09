@@ -5,6 +5,7 @@ ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 PLAN="$ROOT_DIR/docs/plans/2026-06-08-excel-parser-maintenance-baseline.md"
 NONFINITE_PLAN="$ROOT_DIR/docs/plans/2026-06-09-non-finite-number-conversion.md"
 NONFINITE_TEXT_PLAN="$ROOT_DIR/docs/plans/2026-06-09-non-finite-number-text-conversion.md"
+TEXT_VALUE_PLAN="$ROOT_DIR/docs/plans/2026-06-09-text-cell-value-validation.md"
 
 cleanup_bytecode() {
   find "$ROOT_DIR" -maxdepth 3 -type d -name "__pycache__" -prune -exec rm -rf {} + 2>/dev/null || true
@@ -34,6 +35,7 @@ for path in \
   "docs/plans/2026-06-09-text-number-conversion-errors.md" \
   "docs/plans/2026-06-09-non-finite-number-conversion.md" \
   "docs/plans/2026-06-09-non-finite-number-text-conversion.md" \
+  "docs/plans/2026-06-09-text-cell-value-validation.md" \
   "docs/plans/2026-06-08-fractional-int-conversion.md" \
   "docs/plans/2026-06-08-excel-parser-maintenance-baseline.md"; do
   require_file "$path"
@@ -54,6 +56,7 @@ if ! grep -Fq "status: completed" "$PLAN"; then
 fi
 
 if ! grep -Fq "make check" "$ROOT_DIR/README.md" ||
+  ! grep -Fq "make build" "$ROOT_DIR/README.md" ||
   ! grep -Fq "xlrd" "$ROOT_DIR/README.md" ||
   ! grep -Fq "Python 2" "$ROOT_DIR/README.md" ||
   ! grep -Fq "synthetic" "$ROOT_DIR/README.md" ||
@@ -62,20 +65,33 @@ if ! grep -Fq "make check" "$ROOT_DIR/README.md" ||
   exit 1
 fi
 
+if ! grep -Fq "non-string text cells" "$ROOT_DIR/README.md"; then
+  printf '%s\n' "README must document non-string text-cell validation." >&2
+  exit 1
+fi
+
 if ! grep -Fq "scripts/check-baseline.sh" "$ROOT_DIR/VISION.md" ||
   ! grep -Fq "fake workbook" "$ROOT_DIR/VISION.md" ||
   ! grep -Fq "date conversion" "$ROOT_DIR/VISION.md" ||
-  ! grep -Fq "Fractional numeric cells" "$ROOT_DIR/VISION.md"; then
+  ! grep -Fq "Fractional numeric cells" "$ROOT_DIR/VISION.md" ||
+  ! grep -Fq "Non-string text cells" "$ROOT_DIR/VISION.md"; then
   printf '%s\n' "VISION must describe the current parser baseline and date-conversion boundary." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Non-string text cells" "$ROOT_DIR/SECURITY.md"; then
+  printf '%s\n' "SECURITY must document non-string text-cell validation." >&2
   exit 1
 fi
 
 if grep -Fq "except Exception," "$ROOT_DIR/parse.py" ||
   ! grep -Fq "_MissingXlrd" "$ROOT_DIR/parse.py" ||
+  ! grep -Fq "string_types" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "cell_types=None" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "newtype == ExcelProcessor.CELL_EMPTY" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "def convert_number_to_int" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "def convert_number_to_float" "$ROOT_DIR/parse.py" ||
+  ! grep -Fq "def clean_text" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "def convert_text_to_int" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "def convert_text_to_float" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "self.convert_number_to_float(data)" "$ROOT_DIR/parse.py" ||
@@ -97,6 +113,7 @@ if ! grep -Fq "FakeXlrd" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_number_to_int_rejects_fractional_values" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_text_to_number_rejects_blank_values_with_parser_exception" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_text_to_number_rejects_invalid_values_with_parser_exception" "$ROOT_DIR/tests/test_parse.py" ||
+  ! grep -Fq "test_text_conversions_reject_non_string_values_with_parser_exception" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_non_finite_number_conversion_is_rejected" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "CELL_TEXT, value" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_exception_callback_receives_row_errors_and_processing_continues" "$ROOT_DIR/tests/test_parse.py"; then
@@ -110,13 +127,27 @@ if ! grep -Fq "fractional numeric" "$ROOT_DIR/CHANGES.md" ||
   ! grep -Fq "status: completed" "$ROOT_DIR/docs/plans/2026-06-08-fractional-int-conversion.md" ||
   ! grep -Fq "status: completed" "$ROOT_DIR/docs/plans/2026-06-09-text-number-conversion-errors.md" ||
   ! grep -Fq "status: completed" "$NONFINITE_PLAN" ||
-  ! grep -Fq "status: completed" "$NONFINITE_TEXT_PLAN"; then
+  ! grep -Fq "status: completed" "$NONFINITE_TEXT_PLAN" ||
+  ! grep -Fq "status: completed" "$TEXT_VALUE_PLAN"; then
   printf '%s\n' "Fractional integer conversion guard must be documented and planned." >&2
+  exit 1
+fi
+
+if ! grep -Fq "make check" "$TEXT_VALUE_PLAN"; then
+  printf '%s\n' "Text cell value validation plan must record make check verification." >&2
   exit 1
 fi
 
 if ! grep -Fq "make check" "$NONFINITE_TEXT_PLAN"; then
   printf '%s\n' "Non-finite numeric-to-text plan must record make check verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "lint:" "$ROOT_DIR/Makefile" ||
+  ! grep -Fq "test:" "$ROOT_DIR/Makefile" ||
+  ! grep -Fq "build:" "$ROOT_DIR/Makefile" ||
+  ! grep -Fq "check: lint test build" "$ROOT_DIR/Makefile"; then
+  printf '%s\n' "Makefile must expose lint, test, build, and check gates." >&2
   exit 1
 fi
 

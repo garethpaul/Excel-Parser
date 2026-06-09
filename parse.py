@@ -16,6 +16,11 @@ try:
 except ImportError:
     xlrd = _MissingXlrd()
 
+try:
+    string_types = (basestring,)
+except NameError:
+    string_types = (str,)
+
 
 class InvalidDataException(Exception):
     pass
@@ -74,7 +79,7 @@ class ExcelProcessor(object):
 
         if curtype == xlrd.XL_CELL_TEXT:
             if newtype == ExcelProcessor.CELL_TEXT:
-                return data.strip()
+                return self.clean_text(data)
             elif newtype == ExcelProcessor.CELL_INT:
                 return self.convert_text_to_int(data)
             elif newtype == ExcelProcessor.CELL_FLOAT:
@@ -113,8 +118,13 @@ class ExcelProcessor(object):
             raise InvalidDataException("Non-finite numeric value cannot be converted to float: " + str(data))
         return number
 
+    def clean_text(self, data):
+        if not isinstance(data, string_types):
+            raise InvalidDataException("Text cell value must be text: " + str(data))
+        return data.strip()
+
     def convert_text_to_int(self, data):
-        value = data.strip()
+        value = self.clean_text(data)
         if value == "":
             raise InvalidDataException("Empty text value cannot be converted to int")
         try:
@@ -123,7 +133,7 @@ class ExcelProcessor(object):
             raise InvalidDataException("Text value cannot be converted to int: " + value)
 
     def convert_text_to_float(self, data):
-        value = data.strip()
+        value = self.clean_text(data)
         if value == "":
             raise InvalidDataException("Empty text value cannot be converted to float")
         try:

@@ -2,6 +2,8 @@
 
 ## 2026-06-09
 
+- Rejected non-string text cell values through `InvalidDataException` and
+  exposed `make lint`, `make test`, and `make build` gates.
 - Rejected non-finite numeric cells even when callers request text output.
 - Rejected non-finite numeric conversions such as `nan` and `inf`.
 - Routed text-to-number conversion failures through `InvalidDataException` for

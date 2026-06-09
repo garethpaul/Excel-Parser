@@ -56,6 +56,8 @@ baseline.
   fractional numbers raise `InvalidDataException` instead of being truncated.
 - Text cells requested as numeric targets reject blank or malformed text with
   `InvalidDataException`.
+- non-string text cells are rejected with `InvalidDataException` before text,
+  integer, or float conversion.
 - Non-finite numeric values such as `nan` and `inf` are rejected before they
   reach callbacks, including when numeric cells are requested as text.
 - Date conversion is intentionally unsupported and raises
@@ -67,11 +69,16 @@ Run the local maintenance gate:
 
 ```bash
 make check
+make lint
+make test
+make build
 ```
 
 `make check` runs Python 3 unit tests with synthetic workbook data, compiles the
 parser under Python 3, and runs a Python 2 syntax check when `python2` is
-available.
+available. `make lint` runs the full maintenance baseline, `make test` runs the
+offline unittest suite, and `make build` compiles the parser and tests under
+Python 3.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
 
@@ -101,6 +108,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   numeric conversion guardrails.
 - See `docs/plans/2026-06-09-non-finite-number-text-conversion.md` for
   non-finite numeric-to-text conversion guardrails.
+- See `docs/plans/2026-06-09-text-cell-value-validation.md` for non-string
+  text-cell validation.
 
 ## Contributing
 

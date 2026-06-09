@@ -93,6 +93,17 @@ class ExcelProcessorTests(unittest.TestCase):
         with self.assertRaises(parse.InvalidDataException):
             processor.convert_type(FakeXlrd.XL_CELL_TEXT, parse.ExcelProcessor.CELL_FLOAT, "not-a-number")
 
+    def test_text_conversions_reject_non_string_values_with_parser_exception(self):
+        processor, _fake_xlrd = self.processor([])
+
+        for target_type in [
+            parse.ExcelProcessor.CELL_TEXT,
+            parse.ExcelProcessor.CELL_INT,
+            parse.ExcelProcessor.CELL_FLOAT,
+        ]:
+            with self.assertRaises(parse.InvalidDataException):
+                processor.convert_type(FakeXlrd.XL_CELL_TEXT, target_type, None)
+
     def test_non_finite_number_conversion_is_rejected(self):
         processor, _fake_xlrd = self.processor([])
 
