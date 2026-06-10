@@ -228,6 +228,22 @@ class ExcelProcessorTests(unittest.TestCase):
 
         self.assertEqual([], fake_xlrd.opened)
 
+    def test_process_rejects_boolean_target_types_before_opening_workbook(self):
+        processor, fake_xlrd = self.processor([])
+
+        with self.assertRaises(parse.InvalidDataException):
+            processor.process("fixture.xls", "People", False, [True])
+
+        self.assertEqual([], fake_xlrd.opened)
+
+    def test_process_rejects_float_target_types_before_opening_workbook(self):
+        processor, fake_xlrd = self.processor([])
+
+        with self.assertRaises(parse.InvalidDataException):
+            processor.process("fixture.xls", "People", False, [1.0])
+
+        self.assertEqual([], fake_xlrd.opened)
+
     def test_process_rejects_non_xls_workbook_path_before_opening_workbook(self):
         processor, fake_xlrd = self.processor([])
 
@@ -241,6 +257,30 @@ class ExcelProcessorTests(unittest.TestCase):
 
         with self.assertRaises(parse.InvalidDataException):
             processor.process("  ", "People", False, [parse.ExcelProcessor.CELL_TEXT])
+
+        self.assertEqual([], fake_xlrd.opened)
+
+    def test_process_rejects_blank_sheet_name_before_opening_workbook(self):
+        processor, fake_xlrd = self.processor([])
+
+        with self.assertRaises(parse.InvalidDataException):
+            processor.process("fixture.xls", "  ", False, [parse.ExcelProcessor.CELL_TEXT])
+
+        self.assertEqual([], fake_xlrd.opened)
+
+    def test_process_rejects_non_string_sheet_name_before_opening_workbook(self):
+        processor, fake_xlrd = self.processor([])
+
+        with self.assertRaises(parse.InvalidDataException):
+            processor.process("fixture.xls", 1, False, [parse.ExcelProcessor.CELL_TEXT])
+
+        self.assertEqual([], fake_xlrd.opened)
+
+    def test_process_rejects_non_boolean_header_flag_before_opening_workbook(self):
+        processor, fake_xlrd = self.processor([])
+
+        with self.assertRaises(parse.InvalidDataException):
+            processor.process("fixture.xls", "People", "yes", [parse.ExcelProcessor.CELL_TEXT])
 
         self.assertEqual([], fake_xlrd.opened)
 

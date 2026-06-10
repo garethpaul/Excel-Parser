@@ -46,6 +46,10 @@ Workbook paths should be validated as non-empty .xls paths before opening files
 so unsupported or malformed workbook inputs fail before parser file resources are
 touched.
 
+Target cell types must be exact integer constants rather than booleans or
+numerically equal floats. Sheet names must be non-empty strings and header flags
+must be booleans before workbook resources are opened.
+
 GitHub Actions runs clean dependency installs and the local `make check`
 baseline on Python 3.10, 3.12, and 3.14 with pinned actions and read-only
 repository access. The gate includes `pip-audit` and remains limited to

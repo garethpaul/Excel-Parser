@@ -43,6 +43,8 @@ Current baseline:
 - Target cell type declarations fail fast before workbook files are opened.
 - Workbook paths are validated before workbook files are opened and remain scoped
   to non-empty `.xls` paths.
+- Cell type constants, sheet names, and header flags are strictly typed before
+  workbook files are opened.
 - GitHub Actions runs clean installs, the dependency audit, and `make check` on
   Python 3.10, 3.12, and 3.14.
 - Date conversion remains explicitly unsupported.

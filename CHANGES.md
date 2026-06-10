@@ -2,6 +2,10 @@
 
 ## 2026-06-10
 
+- Rejected boolean and floating-point aliases for target cell type constants.
+- Required non-empty string sheet names and boolean header flags before opening
+  workbook resources.
+- Added fail-fast option validation tests and maintenance baseline contracts.
 - Added a pinned, read-only GitHub Actions matrix that installs dependencies and
   runs `make check` on Python 3.10, 3.12, and 3.14.
 - Pinned `xlrd` 2.0.2 and `pip-audit` 2.10.0, then added dependency auditing to

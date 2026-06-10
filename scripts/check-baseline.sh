@@ -11,6 +11,7 @@ TARGET_TYPES_PLAN="$ROOT_DIR/docs/plans/2026-06-09-target-cell-type-validation.m
 WORKBOOK_PATH_PLAN="$ROOT_DIR/docs/plans/2026-06-09-workbook-path-validation.md"
 CI_WORKFLOW="$ROOT_DIR/.github/workflows/check.yml"
 CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
+OPTION_VALIDATION_PLAN="$ROOT_DIR/docs/plans/2026-06-10-processing-option-validation.md"
 
 cleanup_bytecode() {
   find "$ROOT_DIR" -maxdepth 3 -type d -name "__pycache__" -prune -exec rm -rf {} + 2>/dev/null || true
@@ -47,6 +48,7 @@ for path in \
   "docs/plans/2026-06-09-target-cell-type-validation.md" \
   "docs/plans/2026-06-09-workbook-path-validation.md" \
   "docs/plans/2026-06-10-ci-baseline.md" \
+  "docs/plans/2026-06-10-processing-option-validation.md" \
   "docs/plans/2026-06-08-fractional-int-conversion.md" \
   "docs/plans/2026-06-08-excel-parser-maintenance-baseline.md"; do
   require_file "$path"
@@ -94,6 +96,28 @@ fi
 
 if ! grep -Fq "Workbook paths are validated as non-empty .xls paths before opening files" "$ROOT_DIR/README.md"; then
   printf '%s\n' "README must document workbook path validation before workbook access." >&2
+  exit 1
+fi
+
+for option_contract in \
+  "integer_types = (int, long)" \
+  "or isinstance(cell_type, bool)" \
+  "def validate_sheet_name" \
+  "def validate_has_header" \
+  "test_process_rejects_boolean_target_types_before_opening_workbook" \
+  "test_process_rejects_float_target_types_before_opening_workbook" \
+  "test_process_rejects_blank_sheet_name_before_opening_workbook" \
+  "test_process_rejects_non_string_sheet_name_before_opening_workbook" \
+  "test_process_rejects_non_boolean_header_flag_before_opening_workbook"; do
+  if ! grep -Fq "$option_contract" "$ROOT_DIR/parse.py" "$ROOT_DIR/tests/test_parse.py"; then
+    printf '%s\n' "Processing option validation contract is missing: $option_contract" >&2
+    exit 1
+  fi
+done
+
+if ! grep -Fq "Status: Completed" "$OPTION_VALIDATION_PLAN" ||
+  ! grep -Fq "make check" "$OPTION_VALIDATION_PLAN"; then
+  printf '%s\n' "Processing option validation plan must remain completed with verification recorded." >&2
   exit 1
 fi
 

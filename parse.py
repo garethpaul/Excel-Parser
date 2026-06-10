@@ -21,6 +21,11 @@ try:
 except NameError:
     string_types = (str,)
 
+try:
+    integer_types = (int, long)
+except NameError:
+    integer_types = (int,)
+
 MAX_ERROR_VALUE_LENGTH = 80
 
 
@@ -44,6 +49,8 @@ class ExcelProcessor(object):
     def process(self, excel, sheet_name, has_header, cell_types=None):
         cell_types = self.validate_cell_types(cell_types)
         excel = self.validate_workbook_path(excel)
+        sheet_name = self.validate_sheet_name(sheet_name)
+        has_header = self.validate_has_header(has_header)
 
         book = xlrd.open_workbook(excel, on_demand=True)
         try:
@@ -119,7 +126,11 @@ class ExcelProcessor(object):
             raise InvalidDataException("Target cell types must be iterable")
 
         for cell_type in normalized:
-            if cell_type not in self.VALID_CELL_TYPES:
+            if (
+                not isinstance(cell_type, integer_types)
+                or isinstance(cell_type, bool)
+                or cell_type not in self.VALID_CELL_TYPES
+            ):
                 raise InvalidDataException("Invalid target datatype:" + self.format_error_value(cell_type))
         return normalized
 
@@ -129,6 +140,16 @@ class ExcelProcessor(object):
         if not excel.lower().endswith(".xls"):
             raise InvalidDataException("Workbook path must end with .xls")
         return excel
+
+    def validate_sheet_name(self, sheet_name):
+        if not isinstance(sheet_name, string_types) or not sheet_name.strip():
+            raise InvalidDataException("Sheet name must be a non-empty string")
+        return sheet_name
+
+    def validate_has_header(self, has_header):
+        if not isinstance(has_header, bool):
+            raise InvalidDataException("Header flag must be a boolean")
+        return has_header
 
     def convert_number_to_int(self, data):
         number = self.convert_number_to_float(data)

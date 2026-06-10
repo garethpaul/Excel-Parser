@@ -54,8 +54,13 @@ baseline.
   cell and receive `None` for that output position.
 - Target cell type declarations are validated before opening workbooks, so
   invalid output schemas fail before file resources are touched.
+- Target cell type declarations must use exact integer constants; booleans and
+  numerically equal floats are rejected instead of being treated as schema
+  aliases.
 - Workbook paths are validated as non-empty .xls paths before opening files,
   matching the documented `xlrd` 2.x `.xls` boundary.
+- Sheet names must be non-empty strings and `has_header` must be a real boolean;
+  invalid processing options fail before workbook files are opened.
 - Numeric cells convert to `CELL_INT` only when the value is integer-valued;
   fractional numbers raise `InvalidDataException` instead of being truncated.
 - Text cells requested as numeric targets reject blank or malformed text with
@@ -130,6 +135,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - See `docs/plans/2026-06-09-workbook-path-validation.md` for workbook path
   validation before workbook access.
 - See `docs/plans/2026-06-10-ci-baseline.md` for the GitHub Actions baseline.
+- See `docs/plans/2026-06-10-processing-option-validation.md` for strict cell
+  type, sheet name, and header flag validation before workbook access.
 
 ## Contributing
 
