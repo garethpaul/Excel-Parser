@@ -43,6 +43,8 @@ Current baseline:
 - Target cell type declarations fail fast before workbook files are opened.
 - Workbook paths are validated before workbook files are opened and remain scoped
   to non-empty `.xls` paths.
+- GitHub Actions runs clean installs, the dependency audit, and `make check` on
+  Python 3.10, 3.12, and 3.14.
 - Date conversion remains explicitly unsupported.
 
 Next priorities:
@@ -51,6 +53,8 @@ Next priorities:
   behavior changes
 - Port to supported Python syntax in a dedicated pass
 - Decide whether modern `.xlsx` support is in scope
+- Keep hosted CI aligned with the local maintenance gate
+- Keep runtime and audit dependencies pinned to reviewed releases
 
 Contribution rules:
 

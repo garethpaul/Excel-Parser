@@ -1,4 +1,4 @@
-.PHONY: build check lint test
+.PHONY: audit build check lint test
 
 lint:
 	@scripts/check-baseline.sh
@@ -9,4 +9,7 @@ test:
 build:
 	@python3 -m py_compile parse.py tests/test_parse.py
 
-check: lint test build
+audit:
+	@python3 -m pip_audit -r requirements.txt -r requirements-dev.txt
+
+check: lint test build audit

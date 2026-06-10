@@ -9,6 +9,8 @@ TEXT_VALUE_PLAN="$ROOT_DIR/docs/plans/2026-06-09-text-cell-value-validation.md"
 ERROR_SUMMARY_PLAN="$ROOT_DIR/docs/plans/2026-06-09-conversion-error-value-summary.md"
 TARGET_TYPES_PLAN="$ROOT_DIR/docs/plans/2026-06-09-target-cell-type-validation.md"
 WORKBOOK_PATH_PLAN="$ROOT_DIR/docs/plans/2026-06-09-workbook-path-validation.md"
+CI_WORKFLOW="$ROOT_DIR/.github/workflows/check.yml"
+CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 
 cleanup_bytecode() {
   find "$ROOT_DIR" -maxdepth 3 -type d -name "__pycache__" -prune -exec rm -rf {} + 2>/dev/null || true
@@ -26,6 +28,7 @@ require_file() {
 }
 
 for path in \
+  ".github/workflows/check.yml" \
   ".gitignore" \
   "CHANGES.md" \
   "Makefile" \
@@ -33,6 +36,7 @@ for path in \
   "SECURITY.md" \
   "VISION.md" \
   "parse.py" \
+  "requirements-dev.txt" \
   "requirements.txt" \
   "tests/test_parse.py" \
   "docs/plans/2026-06-09-text-number-conversion-errors.md" \
@@ -42,6 +46,7 @@ for path in \
   "docs/plans/2026-06-09-conversion-error-value-summary.md" \
   "docs/plans/2026-06-09-target-cell-type-validation.md" \
   "docs/plans/2026-06-09-workbook-path-validation.md" \
+  "docs/plans/2026-06-10-ci-baseline.md" \
   "docs/plans/2026-06-08-fractional-int-conversion.md" \
   "docs/plans/2026-06-08-excel-parser-maintenance-baseline.md"; do
   require_file "$path"
@@ -62,6 +67,7 @@ if ! grep -Fq "status: completed" "$PLAN"; then
 fi
 
 if ! grep -Fq "make check" "$ROOT_DIR/README.md" ||
+  ! grep -Fq "GitHub Actions" "$ROOT_DIR/README.md" ||
   ! grep -Fq "make build" "$ROOT_DIR/README.md" ||
   ! grep -Fq "xlrd" "$ROOT_DIR/README.md" ||
   ! grep -Fq "Python 2" "$ROOT_DIR/README.md" ||
@@ -92,6 +98,7 @@ if ! grep -Fq "Workbook paths are validated as non-empty .xls paths before openi
 fi
 
 if ! grep -Fq "scripts/check-baseline.sh" "$ROOT_DIR/VISION.md" ||
+  ! grep -Fq "GitHub Actions" "$ROOT_DIR/VISION.md" ||
   ! grep -Fq "fake workbook" "$ROOT_DIR/VISION.md" ||
   ! grep -Fq "date conversion" "$ROOT_DIR/VISION.md" ||
   ! grep -Fq "Fractional numeric cells" "$ROOT_DIR/VISION.md" ||
@@ -120,6 +127,28 @@ fi
 
 if ! grep -Fq "Workbook paths should be validated as non-empty .xls paths before opening files" "$ROOT_DIR/SECURITY.md"; then
   printf '%s\n' "SECURITY must document workbook path validation before workbook access." >&2
+  exit 1
+fi
+
+if ! grep -Fq "actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10" "$CI_WORKFLOW" ||
+  ! grep -Fq "actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405" "$CI_WORKFLOW" ||
+  ! grep -Fq 'python-version: ["3.10", "3.12", "3.14"]' "$CI_WORKFLOW" ||
+  ! grep -Fq 'python-version: ${{ matrix.python-version }}' "$CI_WORKFLOW" ||
+  ! grep -Fq "python -m pip install -r requirements.txt -r requirements-dev.txt" "$CI_WORKFLOW" ||
+  ! grep -Fq "permissions:" "$CI_WORKFLOW" ||
+  ! grep -Fq "contents: read" "$CI_WORKFLOW" ||
+  ! grep -Fq "workflow_dispatch:" "$CI_WORKFLOW" ||
+  ! grep -Fq "cancel-in-progress: true" "$CI_WORKFLOW" ||
+  ! grep -Fq "timeout-minutes: 10" "$CI_WORKFLOW" ||
+  ! grep -Fq "make check" "$CI_WORKFLOW"; then
+  printf '%s\n' "GitHub Actions workflow must run the pinned, read-only Python matrix." >&2
+  exit 1
+fi
+
+if ! grep -Fxq "xlrd==2.0.2" "$ROOT_DIR/requirements.txt" ||
+  ! grep -Fxq "pip-audit==2.10.0" "$ROOT_DIR/requirements-dev.txt" ||
+  ! grep -Fq 'python3 -m pip_audit -r requirements.txt -r requirements-dev.txt' "$ROOT_DIR/Makefile"; then
+  printf '%s\n' "Dependency and audit contracts must remain pinned." >&2
   exit 1
 fi
 
@@ -185,8 +214,14 @@ if ! grep -Fq "fractional numeric" "$ROOT_DIR/CHANGES.md" ||
   ! grep -Fq "status: completed" "$TEXT_VALUE_PLAN" ||
   ! grep -Fq "status: completed" "$TARGET_TYPES_PLAN" ||
   ! grep -Fq "Status: Completed" "$WORKBOOK_PATH_PLAN" ||
+  ! grep -Fq "status: completed" "$CI_PLAN" ||
   ! grep -Fq "status: completed" "$ERROR_SUMMARY_PLAN"; then
   printf '%s\n' "Fractional integer conversion guard must be documented and planned." >&2
+  exit 1
+fi
+
+if ! grep -Fq "GitHub Actions" "$CI_PLAN" || ! grep -Fq "make check" "$CI_PLAN"; then
+  printf '%s\n' "CI baseline plan must record hosted make check verification." >&2
   exit 1
 fi
 
@@ -223,7 +258,7 @@ if ! grep -Fq "lint:" "$ROOT_DIR/Makefile" ||
   exit 1
 fi
 
-if ! grep -Fq "xlrd>=2.0.1,<3" "$ROOT_DIR/requirements.txt" ||
+if ! grep -Fq "xlrd==2.0.2" "$ROOT_DIR/requirements.txt" ||
   ! grep -Fq "__pycache__/" "$ROOT_DIR/.gitignore" ||
   ! grep -Fq "*.py[cod]" "$ROOT_DIR/.gitignore"; then
   printf '%s\n' "Dependency metadata and generated Python ignores must remain explicit." >&2

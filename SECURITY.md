@@ -46,6 +46,11 @@ Workbook paths should be validated as non-empty .xls paths before opening files
 so unsupported or malformed workbook inputs fail before parser file resources are
 touched.
 
+GitHub Actions runs clean dependency installs and the local `make check`
+baseline on Python 3.10, 3.12, and 3.14 with pinned actions and read-only
+repository access. The gate includes `pip-audit` and remains limited to
+synthetic workbook tests unless a separate review documents a real fixture.
+
 ## Dependency and Supply Chain Security
 
 Dependency updates should come from trusted package managers and should keep lockfiles in sync when lockfiles exist. Do not commit credentials, private keys, tokens, generated secrets, or machine-local configuration. If a vulnerability depends on a compromised package, typosquatting risk, insecure transitive dependency, or unsafe build step, include the package name, affected version, and the path through which it is used.

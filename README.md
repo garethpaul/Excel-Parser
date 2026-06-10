@@ -84,7 +84,12 @@ make build
 parser under Python 3, and runs a Python 2 syntax check when `python2` is
 available. `make lint` runs the full maintenance baseline, `make test` runs the
 offline unittest suite, and `make build` compiles the parser and tests under
-Python 3.
+Python 3. `make audit` checks the pinned runtime and verification dependencies
+for known vulnerabilities.
+GitHub Actions performs clean installs and runs the same `make check` baseline
+on Python 3.10, 3.12, and 3.14 for pushes, pull requests, and manual
+dispatches. Workflow actions are pinned by commit and repository access is
+read-only.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
 
@@ -99,6 +104,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   private spreadsheet data.
 - Parser errors should avoid dumping full row contents unless a caller
   explicitly asks for that behavior.
+- Keep `xlrd` and `pip-audit` pinned and update them through reviewed dependency
+  changes that run the full matrix.
 
 ## Maintenance Notes
 
@@ -122,6 +129,7 @@ When the required SDK or runtime is unavailable, use static checks and source re
   type validation before workbook access.
 - See `docs/plans/2026-06-09-workbook-path-validation.md` for workbook path
   validation before workbook access.
+- See `docs/plans/2026-06-10-ci-baseline.md` for the GitHub Actions baseline.
 
 ## Contributing
 
