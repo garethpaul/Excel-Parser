@@ -64,10 +64,11 @@ boundary instead of relying exclusively on fake workbook objects.
 
 ## Verification Completed
 
-- A clean Python 3.12 virtual environment passed `make check` with 22 tests.
-- `python3 -m pip_audit -r requirements.txt -r requirements-dev.txt` reported
-  no known vulnerabilities.
+- Clean Python 3.12.8 and 3.14.0 environments: `make check` passed all 22 tests,
+  real `.xls` processing, compilation, and dependency audits with no known
+  vulnerabilities.
 - GitHub Actions run `27391562146` passed on Python 3.10, 3.12, and 3.14.
 - `git diff --check` passed.
-- Replacing `parse.xlrd` with a different object made the integration test fail
-  at `self.assertIs(parse.xlrd, xlrd)`, proving the real-module guard is active.
+- Five isolated hostile mutations were rejected: removing the real `xlrd`
+  identity guard, removing the integration test, removing the `xlwt` pin,
+  marking this plan incomplete, and replacing this completed evidence.
