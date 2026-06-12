@@ -1,6 +1,6 @@
 # Real XLS Integration Coverage
 
-## Status: In Progress
+## Status: Completed
 
 ## Goal
 
@@ -49,3 +49,25 @@ boundary instead of relying exclusively on fake workbook objects.
 - `git diff --check`.
 - Mutation check: replacing real `xlrd` with the fake adapter in the integration
   test must fail the integration assertions or explicit identity guard.
+
+## Work Completed
+
+- Added a dedicated integration test that writes a temporary synthetic `.xls`
+  workbook with `xlwt` and processes it through the installed `xlrd` module.
+- Covered header skipping, real text and numeric cell types, text-to-number
+  conversion, a missing cell, row indexes, callback ordering, and the single
+  completion callback.
+- Pinned `xlwt==1.3.0` as a development-only dependency and included it in the
+  existing `pip-audit` gate.
+- Updated the build gate, maintenance baseline, project documentation, security
+  posture, and roadmap without changing the parser API or runtime dependency.
+
+## Verification Completed
+
+- A clean Python 3.12 virtual environment passed `make check` with 22 tests.
+- `python3 -m pip_audit -r requirements.txt -r requirements-dev.txt` reported
+  no known vulnerabilities.
+- GitHub Actions run `27391562146` passed on Python 3.10, 3.12, and 3.14.
+- `git diff --check` passed.
+- Replacing `parse.xlrd` with a different object made the integration test fail
+  at `self.assertIs(parse.xlrd, xlrd)`, proving the real-module guard is active.

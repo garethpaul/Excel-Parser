@@ -137,6 +137,13 @@ for integration_contract in \
   fi
 done
 
+if ! grep -Fq "Status: Completed" "$REAL_XLS_PLAN" ||
+  ! grep -Fq "22 tests" "$REAL_XLS_PLAN" ||
+  ! grep -Fq "Python 3.10, 3.12, and 3.14" "$REAL_XLS_PLAN"; then
+  printf '%s\n' "Real XLS integration plan must remain completed with matrix verification recorded." >&2
+  exit 1
+fi
+
 if ! grep -Fq "scripts/check-baseline.sh" "$ROOT_DIR/VISION.md" ||
   ! grep -Fq "GitHub Actions" "$ROOT_DIR/VISION.md" ||
   ! grep -Fq "fake workbook" "$ROOT_DIR/VISION.md" ||
