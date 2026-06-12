@@ -102,7 +102,8 @@ pinned runtime and verification dependencies for known vulnerabilities.
 GitHub Actions performs clean installs and runs the same `make check` baseline
 on Python 3.10, 3.12, and 3.14 for pushes, pull requests, and manual
 dispatches. Workflow actions are pinned by commit and repository access is
-read-only.
+read-only. The workflow does not persist checkout credentials after source
+retrieval.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
 
@@ -149,6 +150,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   type, sheet name, and header flag validation before workbook access.
 - See `docs/plans/2026-06-12-real-xls-integration-coverage.md` for the real
   `.xls` integration contract.
+- See `docs/plans/2026-06-12-checkout-credential-boundary.md` for the hosted
+  checkout token boundary.
 
 ## Contributing
 

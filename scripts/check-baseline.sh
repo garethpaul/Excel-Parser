@@ -13,6 +13,7 @@ CI_WORKFLOW="$ROOT_DIR/.github/workflows/check.yml"
 CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 OPTION_VALIDATION_PLAN="$ROOT_DIR/docs/plans/2026-06-10-processing-option-validation.md"
 REAL_XLS_PLAN="$ROOT_DIR/docs/plans/2026-06-12-real-xls-integration-coverage.md"
+CHECKOUT_CREDENTIAL_PLAN="$ROOT_DIR/docs/plans/2026-06-12-checkout-credential-boundary.md"
 
 cleanup_bytecode() {
   find "$ROOT_DIR" -maxdepth 3 -type d -name "__pycache__" -prune -exec rm -rf {} + 2>/dev/null || true
@@ -52,6 +53,7 @@ for path in \
   "docs/plans/2026-06-10-ci-baseline.md" \
   "docs/plans/2026-06-10-processing-option-validation.md" \
   "docs/plans/2026-06-12-real-xls-integration-coverage.md" \
+  "docs/plans/2026-06-12-checkout-credential-boundary.md" \
   "docs/plans/2026-06-08-fractional-int-conversion.md" \
   "docs/plans/2026-06-08-excel-parser-maintenance-baseline.md"; do
   require_file "$path"
@@ -192,6 +194,23 @@ if ! grep -Fq "actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10" "$CI_W
   exit 1
 fi
 
+if [ "$(grep -Fc "uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10" "$CI_WORKFLOW")" -ne 1 ] ||
+  [ "$(grep -Fc "persist-credentials: false" "$CI_WORKFLOW")" -ne 1 ]; then
+  printf '%s\n' "GitHub Actions must use one pinned checkout without persisting credentials." >&2
+  exit 1
+fi
+
+if ! awk '
+  /uses: actions\/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10/ { checkout = 1; next }
+  checkout && /^[[:space:]]+with:[[:space:]]*$/ { options = 1; next }
+  checkout && options && /^[[:space:]]+persist-credentials: false[[:space:]]*$/ { protected = 1; next }
+  checkout && /^[[:space:]]+- / { exit }
+  END { exit protected ? 0 : 1 }
+' "$CI_WORKFLOW"; then
+  printf '%s\n' "Checkout credential persistence must be disabled on the pinned checkout step." >&2
+  exit 1
+fi
+
 if ! grep -Fxq "xlrd==2.0.2" "$ROOT_DIR/requirements.txt" ||
   ! grep -Fxq "pip-audit==2.10.0" "$ROOT_DIR/requirements-dev.txt" ||
   ! grep -Fxq "xlwt==1.3.0" "$ROOT_DIR/requirements-dev.txt" ||
@@ -270,6 +289,22 @@ fi
 
 if ! grep -Fq "GitHub Actions" "$CI_PLAN" || ! grep -Fq "make check" "$CI_PLAN"; then
   printf '%s\n' "CI baseline plan must record hosted make check verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "status: completed" "$CHECKOUT_CREDENTIAL_PLAN" ||
+  ! grep -Fq 'Python 3.12 `make check` passed' "$CHECKOUT_CREDENTIAL_PLAN" ||
+  ! grep -Fq "external working directory" "$CHECKOUT_CREDENTIAL_PLAN" ||
+  ! grep -Fq "hostile mutations were rejected" "$CHECKOUT_CREDENTIAL_PLAN"; then
+  printf '%s\n' "Checkout credential boundary plan must record completed verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "does not persist checkout credentials" "$ROOT_DIR/README.md" ||
+  ! grep -Fq "does not persist checkout credentials" "$ROOT_DIR/SECURITY.md" ||
+  ! grep -Fq "credential-free checkout" "$ROOT_DIR/VISION.md" ||
+  ! grep -Fq "Stopped GitHub Actions checkout credential persistence" "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' "Project guidance must document the checkout credential boundary." >&2
   exit 1
 fi
 
