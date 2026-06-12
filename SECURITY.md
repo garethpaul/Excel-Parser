@@ -52,8 +52,9 @@ must be booleans before workbook resources are opened.
 
 GitHub Actions runs clean dependency installs and the local `make check`
 baseline on Python 3.10, 3.12, and 3.14 with pinned actions and read-only
-repository access. The gate includes `pip-audit` and remains limited to
-synthetic workbook tests unless a separate review documents a real fixture.
+repository access. The gate includes `pip-audit` and generates a temporary
+synthetic `.xls` workbook to exercise the real parser boundary without
+committing spreadsheet data.
 
 ## Dependency and Supply Chain Security
 
