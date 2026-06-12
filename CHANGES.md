@@ -2,6 +2,8 @@
 
 ## 2026-06-12
 
+- Stopped GitHub Actions checkout credential persistence and added an exact
+  contract for the single pinned checkout step.
 - Added an end-to-end test that generates a temporary synthetic `.xls`
   workbook and processes it through the real `xlrd` boundary.
 - Pinned the test-only `xlwt` writer and extended the maintenance baseline to
