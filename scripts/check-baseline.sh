@@ -138,8 +138,9 @@ for integration_contract in \
 done
 
 if ! grep -Fq "Status: Completed" "$REAL_XLS_PLAN" ||
-  ! grep -Fq "22 tests" "$REAL_XLS_PLAN" ||
-  ! grep -Fq "Python 3.10, 3.12, and 3.14" "$REAL_XLS_PLAN"; then
+  ! grep -Fq "Clean Python 3.12.8 and 3.14.0 environments: \`make check\` passed all 22 tests," "$REAL_XLS_PLAN" ||
+  ! grep -Fq "GitHub Actions run \`27391562146\` passed on Python 3.10, 3.12, and 3.14." "$REAL_XLS_PLAN" ||
+  ! grep -Fq "Five isolated hostile mutations were rejected" "$REAL_XLS_PLAN"; then
   printf '%s\n' "Real XLS integration plan must remain completed with matrix verification recorded." >&2
   exit 1
 fi
