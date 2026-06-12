@@ -12,6 +12,7 @@ WORKBOOK_PATH_PLAN="$ROOT_DIR/docs/plans/2026-06-09-workbook-path-validation.md"
 CI_WORKFLOW="$ROOT_DIR/.github/workflows/check.yml"
 CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 OPTION_VALIDATION_PLAN="$ROOT_DIR/docs/plans/2026-06-10-processing-option-validation.md"
+REAL_XLS_PLAN="$ROOT_DIR/docs/plans/2026-06-12-real-xls-integration-coverage.md"
 
 cleanup_bytecode() {
   find "$ROOT_DIR" -maxdepth 3 -type d -name "__pycache__" -prune -exec rm -rf {} + 2>/dev/null || true
@@ -40,6 +41,7 @@ for path in \
   "requirements-dev.txt" \
   "requirements.txt" \
   "tests/test_parse.py" \
+  "tests/test_xls_integration.py" \
   "docs/plans/2026-06-09-text-number-conversion-errors.md" \
   "docs/plans/2026-06-09-non-finite-number-conversion.md" \
   "docs/plans/2026-06-09-non-finite-number-text-conversion.md" \
@@ -49,12 +51,13 @@ for path in \
   "docs/plans/2026-06-09-workbook-path-validation.md" \
   "docs/plans/2026-06-10-ci-baseline.md" \
   "docs/plans/2026-06-10-processing-option-validation.md" \
+  "docs/plans/2026-06-12-real-xls-integration-coverage.md" \
   "docs/plans/2026-06-08-fractional-int-conversion.md" \
   "docs/plans/2026-06-08-excel-parser-maintenance-baseline.md"; do
   require_file "$path"
 done
 
-python3 -m py_compile "$ROOT_DIR/parse.py" "$ROOT_DIR/tests/test_parse.py"
+python3 -m py_compile "$ROOT_DIR/parse.py" "$ROOT_DIR/tests/test_parse.py" "$ROOT_DIR/tests/test_xls_integration.py"
 python3 -m unittest discover -s "$ROOT_DIR/tests" -p "test*.py"
 
 if command -v python2 >/dev/null 2>&1; then
@@ -121,6 +124,26 @@ if ! grep -Fq "Status: Completed" "$OPTION_VALIDATION_PLAN" ||
   exit 1
 fi
 
+for integration_contract in \
+  "self.assertIs(parse.xlrd, xlrd)" \
+  "tempfile.TemporaryDirectory()" \
+  'workbook.add_sheet("People")' \
+  '("row", 1, ["Alice", 7, 3.5, None])' \
+  '("row", 2, ["Bob", 8, 4.25, "ready"])' \
+  '("done",)'; do
+  if ! grep -Fq "$integration_contract" "$ROOT_DIR/tests/test_xls_integration.py"; then
+    printf '%s\n' "Real XLS integration contract is missing: $integration_contract" >&2
+    exit 1
+  fi
+done
+
+if ! grep -Fq "Status: Completed" "$REAL_XLS_PLAN" ||
+  ! grep -Fq "22 tests" "$REAL_XLS_PLAN" ||
+  ! grep -Fq "Python 3.10, 3.12, and 3.14" "$REAL_XLS_PLAN"; then
+  printf '%s\n' "Real XLS integration plan must remain completed with matrix verification recorded." >&2
+  exit 1
+fi
+
 if ! grep -Fq "scripts/check-baseline.sh" "$ROOT_DIR/VISION.md" ||
   ! grep -Fq "GitHub Actions" "$ROOT_DIR/VISION.md" ||
   ! grep -Fq "fake workbook" "$ROOT_DIR/VISION.md" ||
@@ -171,6 +194,7 @@ fi
 
 if ! grep -Fxq "xlrd==2.0.2" "$ROOT_DIR/requirements.txt" ||
   ! grep -Fxq "pip-audit==2.10.0" "$ROOT_DIR/requirements-dev.txt" ||
+  ! grep -Fxq "xlwt==1.3.0" "$ROOT_DIR/requirements-dev.txt" ||
   ! grep -Fq 'python3 -m pip_audit -r requirements.txt -r requirements-dev.txt' "$ROOT_DIR/Makefile"; then
   printf '%s\n' "Dependency and audit contracts must remain pinned." >&2
   exit 1

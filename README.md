@@ -16,7 +16,9 @@ unit-tested under Python 3 for offline conversion and callback behavior.
 
 - `parse.py` - Excel row processor and conversion helpers
 - `tests/test_parse.py` - synthetic fake-workbook parser tests
+- `tests/test_xls_integration.py` - temporary real `.xls` integration coverage
 - `requirements.txt` - `xlrd` dependency range for real `.xls` workbook parsing
+- `requirements-dev.txt` - pinned audit and synthetic workbook test tools
 - `Makefile` - local verification entry point
 - `CHANGES.md` - maintenance history
 - `SECURITY.md` - security reporting and disclosure guidance
@@ -39,10 +41,16 @@ cd Excel-Parser
 python3 -m pip install -r requirements.txt
 ```
 
-The unit tests do not require a real workbook fixture; they use synthetic
-workbook objects. Install `requirements.txt` when you need to process real
-`.xls` files. Modern `.xlsx` support is intentionally not claimed by this
-baseline.
+Install `requirements-dev.txt` as well when running the maintenance suite:
+
+```bash
+python3 -m pip install -r requirements.txt -r requirements-dev.txt
+```
+
+The tests use fake workbook objects for focused cases and generate a temporary
+synthetic `.xls` workbook for the real `xlrd` integration path. No workbook
+fixture is committed. Modern `.xlsx` support is intentionally not claimed by
+this baseline.
 
 ## Running or Using the Project
 
@@ -85,12 +93,12 @@ make test
 make build
 ```
 
-`make check` runs Python 3 unit tests with synthetic workbook data, compiles the
-parser under Python 3, and runs a Python 2 syntax check when `python2` is
-available. `make lint` runs the full maintenance baseline, `make test` runs the
-offline unittest suite, and `make build` compiles the parser and tests under
-Python 3. `make audit` checks the pinned runtime and verification dependencies
-for known vulnerabilities.
+`make check` runs Python 3 unit tests with synthetic workbook data, including a
+temporary real `.xls` file, compiles the parser and tests under Python 3, and
+runs a Python 2 syntax check when `python2` is available. `make lint` runs the
+full maintenance baseline, `make test` runs the unittest suite, and `make
+build` compiles the parser and tests under Python 3. `make audit` checks the
+pinned runtime and verification dependencies for known vulnerabilities.
 GitHub Actions performs clean installs and runs the same `make check` baseline
 on Python 3.10, 3.12, and 3.14 for pushes, pull requests, and manual
 dispatches. Workflow actions are pinned by commit and repository access is
@@ -111,6 +119,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   explicitly asks for that behavior.
 - Keep `xlrd` and `pip-audit` pinned and update them through reviewed dependency
   changes that run the full matrix.
+- Keep real workbook tests synthetic and temporary; `xlwt` is a test-only
+  dependency and production parsing remains limited to `xlrd`.
 
 ## Maintenance Notes
 
@@ -137,6 +147,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - See `docs/plans/2026-06-10-ci-baseline.md` for the GitHub Actions baseline.
 - See `docs/plans/2026-06-10-processing-option-validation.md` for strict cell
   type, sheet name, and header flag validation before workbook access.
+- See `docs/plans/2026-06-12-real-xls-integration-coverage.md` for the real
+  `.xls` integration contract.
 
 ## Contributing
 

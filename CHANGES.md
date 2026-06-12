@@ -1,5 +1,13 @@
 # Changes
 
+## 2026-06-12
+
+- Added an end-to-end test that generates a temporary synthetic `.xls`
+  workbook and processes it through the real `xlrd` boundary.
+- Pinned the test-only `xlwt` writer and extended the maintenance baseline to
+  preserve real workbook, callback-order, header, conversion, and missing-cell
+  coverage.
+
 ## 2026-06-10
 
 - Rejected boolean and floating-point aliases for target cell type constants.
