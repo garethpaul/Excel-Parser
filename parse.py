@@ -47,6 +47,7 @@ class ExcelProcessor(object):
         self.exceptioncallback = exceptioncallback
 
     def process(self, excel, sheet_name, has_header, cell_types=None):
+        self.validate_callbacks()
         cell_types = self.validate_cell_types(cell_types)
         excel = self.validate_workbook_path(excel)
         sheet_name = self.validate_sheet_name(sheet_name)
@@ -82,6 +83,14 @@ class ExcelProcessor(object):
             release_resources = getattr(book, "release_resources", None)
             if release_resources is not None:
                 release_resources()
+
+    def validate_callbacks(self):
+        if not callable(self.rowdatacallback):
+            raise InvalidDataException("Row data callback must be callable")
+        if not callable(self.parsedonecallback):
+            raise InvalidDataException("Parse completion callback must be callable")
+        if self.exceptioncallback is not None and not callable(self.exceptioncallback):
+            raise InvalidDataException("Exception callback must be callable or None")
 
     def convert_type(self, curtype, newtype, data):
         if newtype == ExcelProcessor.CELL_EMPTY:
