@@ -2,7 +2,7 @@
 title: Excel Parser Python 3 Runtime Baseline
 type: modernization
 date: 2026-06-13
-status: planned
+status: completed
 ---
 
 # Excel Parser Python 3 Runtime Baseline
@@ -62,17 +62,20 @@ the next engineering priority.
   unsupported format/conversion boundaries.
 - **Covers:** R1, R5, R6, R7
 
-## Verification Plan
+## Verification
 
-- Run focused parser tests and full `make check` in fresh or existing pinned
-  Python 3.12.8 and 3.14.0 environments.
-- Apply isolated mutations for restored `basestring`, `long`, Python 2 compile
-  logic, old runtime documentation, removed API regressions, roadmap drift, and
+- Existing isolated Python 3.12.8 and Python 3.14.0 environments passed full
+  `make check` with all 26 unit and real-workbook integration tests, bytecode
+  compilation, and dependency audits with no known vulnerabilities.
+- Nine isolated hostile mutations were rejected for restored `basestring`,
+  `long`, Python 2 compile logic, old-style classes, removed API regression,
+  changed callback defaults, runtime documentation drift, roadmap drift, and
   incomplete plan evidence.
-- Inspect exact paths, dependency manifests, credential-like additions,
-  generated artifacts, and staged files before committing.
-- Use no private workbooks; the real integration test must continue generating
-  a temporary synthetic `.xls` file.
+- Shell syntax, `git diff --check`, exact-path review, unchanged dependency
+  manifests, credential-like addition inspection, generated-artifact
+  inspection, and staged-path review passed.
+- Verification used no private workbooks; the real integration suite generated
+  and deleted a temporary synthetic .xls file.
 
 ## Risks
 

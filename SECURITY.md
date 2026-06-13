@@ -61,6 +61,10 @@ synthetic `.xls` workbook to exercise the real parser boundary without
 committing spreadsheet data. The workflow does not persist checkout credentials
 after source retrieval.
 
+The maintained runtime is Python 3.10 or newer. Dormant Python 2 compatibility
+branches are excluded from the supported parser path so validation and audit
+evidence cover the code that callers actually execute.
+
 ## Dependency and Supply Chain Security
 
 Dependency updates should come from trusted package managers and should keep lockfiles in sync when lockfiles exist. Do not commit credentials, private keys, tokens, generated secrets, or machine-local configuration. If a vulnerability depends on a compromised package, typosquatting risk, insecure transitive dependency, or unsafe build step, include the package name, affected version, and the path through which it is used.

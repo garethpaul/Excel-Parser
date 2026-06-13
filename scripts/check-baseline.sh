@@ -15,6 +15,7 @@ OPTION_VALIDATION_PLAN="$ROOT_DIR/docs/plans/2026-06-10-processing-option-valida
 REAL_XLS_PLAN="$ROOT_DIR/docs/plans/2026-06-12-real-xls-integration-coverage.md"
 CHECKOUT_CREDENTIAL_PLAN="$ROOT_DIR/docs/plans/2026-06-12-checkout-credential-boundary.md"
 CALLBACK_VALIDATION_PLAN="$ROOT_DIR/docs/plans/2026-06-13-callback-validation.md"
+PYTHON3_RUNTIME_PLAN="$ROOT_DIR/docs/plans/2026-06-13-python3-runtime-baseline.md"
 
 cleanup_bytecode() {
   find "$ROOT_DIR" -maxdepth 3 -type d -name "__pycache__" -prune -exec rm -rf {} + 2>/dev/null || true
@@ -56,6 +57,7 @@ for path in \
   "docs/plans/2026-06-12-real-xls-integration-coverage.md" \
   "docs/plans/2026-06-12-checkout-credential-boundary.md" \
   "docs/plans/2026-06-13-callback-validation.md" \
+  "docs/plans/2026-06-13-python3-runtime-baseline.md" \
   "docs/plans/2026-06-08-fractional-int-conversion.md" \
   "docs/plans/2026-06-08-excel-parser-maintenance-baseline.md"; do
   require_file "$path"
@@ -63,12 +65,6 @@ done
 
 python3 -m py_compile "$ROOT_DIR/parse.py" "$ROOT_DIR/tests/test_parse.py" "$ROOT_DIR/tests/test_xls_integration.py"
 python3 -m unittest discover -s "$ROOT_DIR/tests" -p "test*.py"
-
-if command -v python2 >/dev/null 2>&1; then
-  python2 -m py_compile "$ROOT_DIR/parse.py"
-else
-  printf '%s\n' "Skipping Python 2 compile check: python2 is not installed."
-fi
 
 if ! grep -Fq "status: completed" "$PLAN"; then
   printf '%s\n' "Plan must be marked completed." >&2
@@ -79,7 +75,7 @@ if ! grep -Fq "make check" "$ROOT_DIR/README.md" ||
   ! grep -Fq "GitHub Actions" "$ROOT_DIR/README.md" ||
   ! grep -Fq "make build" "$ROOT_DIR/README.md" ||
   ! grep -Fq "xlrd" "$ROOT_DIR/README.md" ||
-  ! grep -Fq "Python 2" "$ROOT_DIR/README.md" ||
+  ! grep -Fq "Python 3.10 or newer" "$ROOT_DIR/README.md" ||
   ! grep -Fq "synthetic" "$ROOT_DIR/README.md" ||
   ! grep -Fq "fractional" "$ROOT_DIR/README.md"; then
   printf '%s\n' "README must document the check command, xlrd dependency, legacy Python posture, and fixture safety." >&2
@@ -107,7 +103,7 @@ if ! grep -Fq "Workbook paths are validated as non-empty .xls paths before openi
 fi
 
 for option_contract in \
-  "integer_types = (int, long)" \
+  "not isinstance(cell_type, int)" \
   "or isinstance(cell_type, bool)" \
   "def validate_sheet_name" \
   "def validate_has_header" \
@@ -224,7 +220,7 @@ fi
 
 if grep -Fq "except Exception," "$ROOT_DIR/parse.py" ||
   ! grep -Fq "_MissingXlrd" "$ROOT_DIR/parse.py" ||
-  ! grep -Fq "string_types" "$ROOT_DIR/parse.py" ||
+  ! grep -Fq "isinstance(data, str)" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "MAX_ERROR_VALUE_LENGTH" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "VALID_CELL_TYPES" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "def validate_workbook_path" "$ROOT_DIR/parse.py" ||
@@ -251,6 +247,61 @@ if grep -Fq "except Exception," "$ROOT_DIR/parse.py" ||
   ! grep -Fq "on_demand=True" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "release_resources" "$ROOT_DIR/parse.py"; then
   printf '%s\n' "Parser must stay importable under Python 3 while preserving the legacy callback API." >&2
+  exit 1
+fi
+
+for obsolete_python_contract in \
+  "basestring" \
+  "integer_types" \
+  "string_types" \
+  "int, long" \
+  "class _MissingXlrd(object)" \
+  "class ExcelProcessor(object)" \
+  "class FakeSheet(object)" \
+  "class FakeBook(object)" \
+  "class FakeXlrd(object)"; do
+  if grep -Fq "$obsolete_python_contract" "$ROOT_DIR/parse.py" "$ROOT_DIR/tests/test_parse.py"; then
+    printf '%s\n' "Dormant Python 2 compatibility contract returned: $obsolete_python_contract" >&2
+    exit 1
+  fi
+done
+
+python3 - "$ROOT_DIR/scripts/check-baseline.sh" <<'PY'
+from pathlib import Path
+import sys
+
+source = Path(sys.argv[1]).read_text(encoding="utf-8")
+runtime = "python" + "2"
+if "command -v " + runtime in source or runtime + " -m py_compile" in source:
+    raise SystemExit("The maintained gate must not retain optional Python 2 compilation.")
+PY
+
+if ! grep -Fq "test_public_callback_api_signatures_are_preserved" "$ROOT_DIR/tests/test_parse.py" ||
+  ! grep -Fq "inspect.signature(parse.ExcelProcessor.__init__)" "$ROOT_DIR/tests/test_parse.py" ||
+  ! grep -Fq "inspect.signature(parse.ExcelProcessor.process)" "$ROOT_DIR/tests/test_parse.py" ||
+  ! grep -Fq 'constructor.parameters["exceptioncallback"].default' "$ROOT_DIR/tests/test_parse.py" ||
+  ! grep -Fq 'process.parameters["cell_types"].default' "$ROOT_DIR/tests/test_parse.py"; then
+  printf '%s\n' "Python 3 migration must preserve the public callback API signatures." >&2
+  exit 1
+fi
+
+for document in "$ROOT_DIR/README.md" "$ROOT_DIR/AGENTS.md" "$ROOT_DIR/SECURITY.md" "$ROOT_DIR/VISION.md" "$ROOT_DIR/CHANGES.md"; do
+  if ! grep -Fq "Python 3.10" "$document"; then
+    printf '%s\n' "$document must document the maintained Python 3.10+ runtime." >&2
+    exit 1
+  fi
+done
+
+if grep -Fq "Port to supported Python syntax in a dedicated pass" "$ROOT_DIR/VISION.md"; then
+  printf '%s\n' "VISION must move the completed Python runtime port out of next priorities." >&2
+  exit 1
+fi
+
+if ! grep -Fq "status: completed" "$PYTHON3_RUNTIME_PLAN" ||
+  ! grep -Fq "Python 3.12.8 and Python 3.14.0" "$PYTHON3_RUNTIME_PLAN" ||
+  ! grep -Fq "hostile mutations were rejected" "$PYTHON3_RUNTIME_PLAN" ||
+  ! grep -Fq "temporary synthetic .xls" "$PYTHON3_RUNTIME_PLAN"; then
+  printf '%s\n' "Python 3 runtime plan must record truthful completed verification." >&2
   exit 1
 fi
 

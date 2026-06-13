@@ -1,7 +1,7 @@
 import math
 
 
-class _MissingXlrd(object):
+class _MissingXlrd:
     XL_CELL_EMPTY = 0
     XL_CELL_TEXT = 1
     XL_CELL_NUMBER = 2
@@ -16,16 +16,6 @@ try:
 except ImportError:
     xlrd = _MissingXlrd()
 
-try:
-    string_types = (basestring,)
-except NameError:
-    string_types = (str,)
-
-try:
-    integer_types = (int, long)
-except NameError:
-    integer_types = (int,)
-
 MAX_ERROR_VALUE_LENGTH = 80
 
 
@@ -33,7 +23,7 @@ class InvalidDataException(Exception):
     pass
 
 
-class ExcelProcessor(object):
+class ExcelProcessor:
     CELL_EMPTY = 0
     CELL_TEXT = 1
     CELL_INT = 2
@@ -136,7 +126,7 @@ class ExcelProcessor(object):
 
         for cell_type in normalized:
             if (
-                not isinstance(cell_type, integer_types)
+                not isinstance(cell_type, int)
                 or isinstance(cell_type, bool)
                 or cell_type not in self.VALID_CELL_TYPES
             ):
@@ -144,14 +134,14 @@ class ExcelProcessor(object):
         return normalized
 
     def validate_workbook_path(self, excel):
-        if not isinstance(excel, string_types) or not excel.strip():
+        if not isinstance(excel, str) or not excel.strip():
             raise InvalidDataException("Workbook path must be a non-empty .xls path")
         if not excel.lower().endswith(".xls"):
             raise InvalidDataException("Workbook path must end with .xls")
         return excel
 
     def validate_sheet_name(self, sheet_name):
-        if not isinstance(sheet_name, string_types) or not sheet_name.strip():
+        if not isinstance(sheet_name, str) or not sheet_name.strip():
             raise InvalidDataException("Sheet name must be a non-empty string")
         return sheet_name
 
@@ -177,7 +167,7 @@ class ExcelProcessor(object):
         return number
 
     def clean_text(self, data):
-        if not isinstance(data, string_types):
+        if not isinstance(data, str):
             raise InvalidDataException("Text cell value must be text: " + self.format_error_value(data))
         return data.strip()
 
@@ -201,7 +191,7 @@ class ExcelProcessor(object):
 
     def format_error_value(self, data):
         try:
-            value = data if isinstance(data, string_types) else str(data)
+            value = data if isinstance(data, str) else str(data)
         except Exception:
             return "<unprintable>"
 

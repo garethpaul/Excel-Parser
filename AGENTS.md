@@ -14,6 +14,7 @@
 
 ## Development commands
 
+- Supported runtime: Python 3.10 or newer; hosted verification covers Python 3.10, 3.12, and 3.14.
 - Install dependencies: `python3 -m pip install -r requirements.txt -r requirements-dev.txt`
 - Full baseline: `make check`
 - Lint/static checks: `make lint`
@@ -48,6 +49,7 @@
 - Validate the sheet name, boolean header flag, and exact integer target-type constants before opening a workbook. Do not accept booleans or numerically equivalent floats as schema aliases.
 - Preserve strict conversion behavior: reject fractional integer conversions, blank or malformed numeric text, non-string text cells, non-finite numbers, unsupported dates, and unprintable or oversized raw values in errors.
 - Keep `xlrd` and `pip-audit` pinned through reviewed dependency changes that pass the full Python matrix.
+- Do not restore Python 2 compatibility branches (`basestring`, `long`, or old-style class inheritance); preserve the public callback signatures through Python 3 tests instead.
 - See `SECURITY.md` for vulnerability reporting and safe research guidance.
 - See `VISION.md` for project direction and contribution guardrails.
 - See `docs/plans/2026-06-08-excel-parser-maintenance-baseline.md` for the current parser maintenance baseline.
