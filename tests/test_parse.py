@@ -284,6 +284,39 @@ class ExcelProcessorTests(unittest.TestCase):
 
         self.assertEqual([], fake_xlrd.opened)
 
+    def test_process_rejects_non_callable_row_callback_before_opening_workbook(self):
+        fake_xlrd = FakeXlrd({"People": FakeSheet([])})
+        parse.xlrd = fake_xlrd
+        processor = parse.ExcelProcessor(None, lambda: None)
+
+        with self.assertRaises(parse.InvalidDataException) as context:
+            processor.process("fixture.xls", "People", False, [])
+
+        self.assertEqual("Row data callback must be callable", str(context.exception))
+        self.assertEqual([], fake_xlrd.opened)
+
+    def test_process_rejects_non_callable_done_callback_before_opening_workbook(self):
+        fake_xlrd = FakeXlrd({"People": FakeSheet([])})
+        parse.xlrd = fake_xlrd
+        processor = parse.ExcelProcessor(lambda _rowid, _values: None, None)
+
+        with self.assertRaises(parse.InvalidDataException) as context:
+            processor.process("fixture.xls", "People", False, [])
+
+        self.assertEqual("Parse completion callback must be callable", str(context.exception))
+        self.assertEqual([], fake_xlrd.opened)
+
+    def test_process_rejects_non_callable_exception_callback_before_opening_workbook(self):
+        fake_xlrd = FakeXlrd({"People": FakeSheet([])})
+        parse.xlrd = fake_xlrd
+        processor = parse.ExcelProcessor(lambda _rowid, _values: None, lambda: None, "invalid")
+
+        with self.assertRaises(parse.InvalidDataException) as context:
+            processor.process("fixture.xls", "People", False, [])
+
+        self.assertEqual("Exception callback must be callable or None", str(context.exception))
+        self.assertEqual([], fake_xlrd.opened)
+
     def test_exception_callback_receives_row_errors_and_processing_continues(self):
         rows = [
             [(FakeXlrd.XL_CELL_TEXT, "Count")],

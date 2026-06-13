@@ -1,7 +1,7 @@
 ---
 title: Excel Parser Callback Validation
 type: reliability
-status: in_progress
+status: completed
 date: 2026-06-13
 ---
 
@@ -31,7 +31,7 @@ handlers fail with `InvalidDataException` instead of surfacing delayed raw
 - R5. Unit tests and the static baseline must reject removal or reordering of
   the fail-fast callback boundary.
 - R6. The current checkout credential boundary from successor PR #3 must be
-  integrated without altering its exact source commit or closing that PR.
+  integrated by replaying the exact source patch without closing that PR.
 
 ## Non-Goals
 
@@ -72,3 +72,26 @@ Files: `README.md`, `SECURITY.md`, `VISION.md`, `CHANGES.md`
   static/test gate must reject both changes.
 - Run `git diff --check` and an intended-file secret scan.
 - Take one bounded exact-head hosted check snapshot after push; do not poll.
+
+## Verification
+
+- Python 3.12 focused tests passed for all three invalid callback slots.
+- The rooted baseline and all 25 unit and integration tests passed in a copied
+  repository fixture before hostile mutations.
+- Removing the process-entry callback validation failed the callback regression
+  tests.
+- Moving callback validation after workbook option checks failed the explicit
+  source-order contract.
+- `git diff --check` passed before the full project gate.
+
+## Work Completed
+
+- Added stable fail-fast validation for required row and completion callbacks
+  and the optional exception callback.
+- Preserved successful row delivery, row-error recovery, completion order, and
+  workbook resource release behavior.
+- Added direct no-workbook-open regression tests for all invalid callback slots.
+- Added source, test, documentation, and completed-plan contracts to the rooted
+  maintenance gate.
+- Replayed the exact checkout credential boundary patch from source commit
+  `7621044bbbeaf3d3c11b240912481e59d6b82d2d`; PR #3 remains open and unchanged.

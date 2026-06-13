@@ -14,6 +14,7 @@ CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 OPTION_VALIDATION_PLAN="$ROOT_DIR/docs/plans/2026-06-10-processing-option-validation.md"
 REAL_XLS_PLAN="$ROOT_DIR/docs/plans/2026-06-12-real-xls-integration-coverage.md"
 CHECKOUT_CREDENTIAL_PLAN="$ROOT_DIR/docs/plans/2026-06-12-checkout-credential-boundary.md"
+CALLBACK_VALIDATION_PLAN="$ROOT_DIR/docs/plans/2026-06-13-callback-validation.md"
 
 cleanup_bytecode() {
   find "$ROOT_DIR" -maxdepth 3 -type d -name "__pycache__" -prune -exec rm -rf {} + 2>/dev/null || true
@@ -54,6 +55,7 @@ for path in \
   "docs/plans/2026-06-10-processing-option-validation.md" \
   "docs/plans/2026-06-12-real-xls-integration-coverage.md" \
   "docs/plans/2026-06-12-checkout-credential-boundary.md" \
+  "docs/plans/2026-06-13-callback-validation.md" \
   "docs/plans/2026-06-08-fractional-int-conversion.md" \
   "docs/plans/2026-06-08-excel-parser-maintenance-baseline.md"; do
   require_file "$path"
@@ -252,6 +254,37 @@ if grep -Fq "except Exception," "$ROOT_DIR/parse.py" ||
   exit 1
 fi
 
+for callback_contract in \
+  "def validate_callbacks(self)" \
+  "if not callable(self.rowdatacallback)" \
+  "if not callable(self.parsedonecallback)" \
+  "self.exceptioncallback is not None and not callable(self.exceptioncallback)" \
+  "Row data callback must be callable" \
+  "Parse completion callback must be callable" \
+  "Exception callback must be callable or None"; do
+  if ! grep -Fq "$callback_contract" "$ROOT_DIR/parse.py"; then
+    printf '%s\n' "Parser callback contract is missing: $callback_contract" >&2
+    exit 1
+  fi
+done
+
+python3 - "$ROOT_DIR/parse.py" <<'PY'
+import pathlib
+import sys
+
+source = pathlib.Path(sys.argv[1]).read_text()
+try:
+    process = source.index("    def process(self, excel, sheet_name, has_header, cell_types=None):")
+    callback_validation = source.index("        self.validate_callbacks()", process)
+    cell_type_validation = source.index("        cell_types = self.validate_cell_types(cell_types)", process)
+    workbook_open = source.index("        book = xlrd.open_workbook(excel, on_demand=True)", process)
+except ValueError as exc:
+    raise SystemExit("Callback validation process boundary is missing") from exc
+
+if not process < callback_validation < cell_type_validation < workbook_open:
+    raise SystemExit("Callback validation must be the first process boundary before workbook access")
+PY
+
 if ! grep -Fq "FakeXlrd" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_process_skips_header_and_handles_missing_cells" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_process_allows_cell_empty_targets_to_skip_present_values" "$ROOT_DIR/tests/test_parse.py" ||
@@ -267,6 +300,9 @@ if ! grep -Fq "FakeXlrd" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_process_rejects_invalid_target_types_before_opening_workbook" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_process_rejects_non_xls_workbook_path_before_opening_workbook" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_process_rejects_blank_workbook_path_before_opening_workbook" "$ROOT_DIR/tests/test_parse.py" ||
+  ! grep -Fq "test_process_rejects_non_callable_row_callback_before_opening_workbook" "$ROOT_DIR/tests/test_parse.py" ||
+  ! grep -Fq "test_process_rejects_non_callable_done_callback_before_opening_workbook" "$ROOT_DIR/tests/test_parse.py" ||
+  ! grep -Fq "test_process_rejects_non_callable_exception_callback_before_opening_workbook" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_exception_callback_receives_row_errors_and_processing_continues" "$ROOT_DIR/tests/test_parse.py"; then
   printf '%s\n' "Offline tests must cover fake-workbook processing and callback error behavior." >&2
   exit 1
@@ -306,6 +342,22 @@ if ! grep -Fq "does not persist checkout credentials" "$ROOT_DIR/README.md" ||
   ! grep -Fq "credential-free checkout" "$ROOT_DIR/VISION.md" ||
   ! grep -Fq "Stopped GitHub Actions checkout credential persistence" "$ROOT_DIR/CHANGES.md"; then
   printf '%s\n' "Project guidance must document the checkout credential boundary." >&2
+  exit 1
+fi
+
+if ! grep -Fq "status: completed" "$CALLBACK_VALIDATION_PLAN" ||
+  ! grep -Fq "all 25 unit and integration tests passed" "$CALLBACK_VALIDATION_PLAN" ||
+  ! grep -Fq "callback validation failed" "$CALLBACK_VALIDATION_PLAN" ||
+  ! grep -Fq "validation after workbook option checks failed" "$CALLBACK_VALIDATION_PLAN"; then
+  printf '%s\n' "Callback validation plan must record completed verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Callbacks are validated before opening a workbook" "$ROOT_DIR/README.md" ||
+  ! grep -Fq "Callback slots must be validated before opening workbook files" "$ROOT_DIR/SECURITY.md" ||
+  ! grep -Fq "Callback configuration fails fast before workbook files are opened" "$ROOT_DIR/VISION.md" ||
+  ! grep -Fq "Validated parser callbacks before opening workbook files" "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' "Project guidance must document fail-fast callback validation." >&2
   exit 1
 fi
 

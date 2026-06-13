@@ -1,5 +1,10 @@
 # Changes
 
+## 2026-06-13
+
+- Validated parser callbacks before opening workbook files so invalid row,
+  completion, and exception handlers fail through `InvalidDataException`.
+
 ## 2026-06-12
 
 - Stopped GitHub Actions checkout credential persistence and added an exact

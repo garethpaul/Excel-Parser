@@ -58,6 +58,8 @@ this baseline.
   from `parse.py`.
 - Call `process(path, sheet_name, has_header, cell_types)` with target cell
   types such as `ExcelProcessor.CELL_TEXT`, `CELL_INT`, and `CELL_FLOAT`.
+- Callbacks are validated before opening a workbook. Row and completion
+  callbacks must be callable; the exception callback must be callable or `None`.
 - Use `ExcelProcessor.CELL_EMPTY` in `cell_types` to ignore a present source
   cell and receive `None` for that output position.
 - Target cell type declarations are validated before opening workbooks, so
@@ -152,6 +154,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   `.xls` integration contract.
 - See `docs/plans/2026-06-12-checkout-credential-boundary.md` for the hosted
   checkout token boundary.
+- See `docs/plans/2026-06-13-callback-validation.md` for the fail-fast callback
+  configuration boundary.
 
 ## Contributing
 

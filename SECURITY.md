@@ -50,6 +50,10 @@ Target cell types must be exact integer constants rather than booleans or
 numerically equal floats. Sheet names must be non-empty strings and header flags
 must be booleans before workbook resources are opened.
 
+Callback slots must be validated before opening workbook files so invalid row,
+completion, or exception handlers cannot trigger delayed raw interpreter errors
+after parser resources are touched.
+
 GitHub Actions runs clean dependency installs and the local `make check`
 baseline on Python 3.10, 3.12, and 3.14 with pinned actions and read-only
 repository access. The gate includes `pip-audit` and generates a temporary
