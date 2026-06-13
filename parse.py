@@ -68,11 +68,11 @@ class ExcelProcessor:
                     else:
                         raise
 
-            self.parsedonecallback()
         finally:
             release_resources = getattr(book, "release_resources", None)
             if release_resources is not None:
                 release_resources()
+        self.parsedonecallback()
 
     def validate_callbacks(self):
         if not callable(self.rowdatacallback):

@@ -16,6 +16,7 @@ REAL_XLS_PLAN="$ROOT_DIR/docs/plans/2026-06-12-real-xls-integration-coverage.md"
 CHECKOUT_CREDENTIAL_PLAN="$ROOT_DIR/docs/plans/2026-06-12-checkout-credential-boundary.md"
 CALLBACK_VALIDATION_PLAN="$ROOT_DIR/docs/plans/2026-06-13-callback-validation.md"
 PYTHON3_RUNTIME_PLAN="$ROOT_DIR/docs/plans/2026-06-13-python3-runtime-baseline.md"
+COMPLETION_ORDER_PLAN="$ROOT_DIR/docs/plans/2026-06-13-workbook-release-before-completion.md"
 
 cleanup_bytecode() {
   find "$ROOT_DIR" -maxdepth 3 -type d -name "__pycache__" -prune -exec rm -rf {} + 2>/dev/null || true
@@ -58,10 +59,52 @@ for path in \
   "docs/plans/2026-06-12-checkout-credential-boundary.md" \
   "docs/plans/2026-06-13-callback-validation.md" \
   "docs/plans/2026-06-13-python3-runtime-baseline.md" \
+  "docs/plans/2026-06-13-workbook-release-before-completion.md" \
   "docs/plans/2026-06-08-fractional-int-conversion.md" \
   "docs/plans/2026-06-08-excel-parser-maintenance-baseline.md"; do
   require_file "$path"
 done
+
+python3 - "$ROOT_DIR/parse.py" <<'PY'
+import pathlib
+import sys
+
+source = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")
+process = source.split("    def process(", 1)[1].split("    def validate_callbacks", 1)[0]
+release = 'release_resources()'
+completion = 'self.parsedonecallback()'
+if process.count(release) != 1 or process.count(completion) != 1:
+    raise SystemExit("Workbook release and completion calls must remain unique.")
+if process.index(release) > process.index(completion):
+    raise SystemExit("Workbook resources must be released before parse completion is signaled.")
+PY
+
+for completion_order_contract in \
+  "test_process_releases_workbook_before_completion_callback" \
+  "test_process_releases_workbook_before_raising_completion_callback" \
+  "completion_states.append(book.released)" \
+  'self.assertTrue(fake_xlrd.opened[0][2].released)'; do
+  if ! grep -Fq "$completion_order_contract" "$ROOT_DIR/tests/test_parse.py"; then
+    printf '%s\n' "Workbook completion-order regression is missing: $completion_order_contract" >&2
+    exit 1
+  fi
+done
+
+if ! grep -Fq "status: completed" "$COMPLETION_ORDER_PLAN" ||
+  ! grep -Fq "Python 3.12.8 and Python 3.14.0" "$COMPLETION_ORDER_PLAN" ||
+  ! grep -Fq "hostile mutations were rejected" "$COMPLETION_ORDER_PLAN" ||
+  ! grep -Fq "No private workbook" "$COMPLETION_ORDER_PLAN"; then
+  printf '%s\n' "Workbook completion-order plan must record truthful completed verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "resources are released before the parse-completion callback" "$ROOT_DIR/README.md" ||
+  ! grep -Fq "resources are released before a successful parse invokes" "$ROOT_DIR/SECURITY.md" ||
+  ! grep -Fq "Workbook release completes before the parse-completion callback" "$ROOT_DIR/VISION.md" ||
+  ! grep -Fq "Released workbook resources before invoking" "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' "Project docs must preserve workbook release-before-completion ordering." >&2
+  exit 1
+fi
 
 python3 -m py_compile "$ROOT_DIR/parse.py" "$ROOT_DIR/tests/test_parse.py" "$ROOT_DIR/tests/test_xls_integration.py"
 python3 -m unittest discover -s "$ROOT_DIR/tests" -p "test*.py"
