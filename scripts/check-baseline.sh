@@ -18,6 +18,7 @@ CALLBACK_VALIDATION_PLAN="$ROOT_DIR/docs/plans/2026-06-13-callback-validation.md
 PYTHON3_RUNTIME_PLAN="$ROOT_DIR/docs/plans/2026-06-13-python3-runtime-baseline.md"
 COMPLETION_ORDER_PLAN="$ROOT_DIR/docs/plans/2026-06-13-workbook-release-before-completion.md"
 RELEASE_HOOK_PLAN="$ROOT_DIR/docs/plans/2026-06-13-workbook-release-hook-contract.md"
+LOCATION_INDEPENDENT_MAKE_PLAN="$ROOT_DIR/docs/plans/2026-06-13-location-independent-make.md"
 
 cleanup_bytecode() {
   find "$ROOT_DIR" -maxdepth 3 -type d -name "__pycache__" -prune -exec rm -rf {} + 2>/dev/null || true
@@ -62,6 +63,7 @@ for path in \
   "docs/plans/2026-06-13-python3-runtime-baseline.md" \
   "docs/plans/2026-06-13-workbook-release-before-completion.md" \
   "docs/plans/2026-06-13-workbook-release-hook-contract.md" \
+  "docs/plans/2026-06-13-location-independent-make.md" \
   "docs/plans/2026-06-08-fractional-int-conversion.md" \
   "docs/plans/2026-06-08-excel-parser-maintenance-baseline.md"; do
   require_file "$path"
@@ -154,8 +156,8 @@ if ! grep -Fq "resources are released before the parse-completion callback" "$RO
   exit 1
 fi
 
-python3 -m py_compile "$ROOT_DIR/parse.py" "$ROOT_DIR/tests/test_parse.py" "$ROOT_DIR/tests/test_xls_integration.py"
-python3 -m unittest discover -s "$ROOT_DIR/tests" -p "test*.py"
+(cd "$ROOT_DIR" && python3 -m py_compile parse.py tests/test_parse.py tests/test_xls_integration.py)
+(cd "$ROOT_DIR" && python3 -m unittest discover -s tests -p "test*.py")
 
 if ! grep -Fq "status: completed" "$PLAN"; then
   printf '%s\n' "Plan must be marked completed." >&2
@@ -304,7 +306,7 @@ fi
 if ! grep -Fxq "xlrd==2.0.2" "$ROOT_DIR/requirements.txt" ||
   ! grep -Fxq "pip-audit==2.10.0" "$ROOT_DIR/requirements-dev.txt" ||
   ! grep -Fxq "xlwt==1.3.0" "$ROOT_DIR/requirements-dev.txt" ||
-  ! grep -Fq 'python3 -m pip_audit -r requirements.txt -r requirements-dev.txt' "$ROOT_DIR/Makefile"; then
+  ! grep -Fq 'python3 -m pip_audit -r "$(ROOT)/requirements.txt" -r "$(ROOT)/requirements-dev.txt"' "$ROOT_DIR/Makefile"; then
   printf '%s\n' "Dependency and audit contracts must remain pinned." >&2
   exit 1
 fi
@@ -533,6 +535,37 @@ if ! grep -Fq "lint:" "$ROOT_DIR/Makefile" ||
   ! grep -Fq "build:" "$ROOT_DIR/Makefile" ||
   ! grep -Fq "check: lint test build" "$ROOT_DIR/Makefile"; then
   printf '%s\n' "Makefile must expose lint, test, build, and check gates." >&2
+  exit 1
+fi
+
+if ! grep -Fq 'ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))' "$ROOT_DIR/Makefile" ||
+  ! grep -Fq '"$(ROOT)/scripts/check-baseline.sh"' "$ROOT_DIR/Makefile" ||
+  ! grep -Fq 'cd "$(ROOT)" && python3 -m unittest discover' "$ROOT_DIR/Makefile" ||
+  ! grep -Fq '"$(ROOT)/parse.py"' "$ROOT_DIR/Makefile" ||
+  ! grep -Fq '"$(ROOT)/requirements.txt"' "$ROOT_DIR/Makefile" ||
+  ! grep -Fq '"$(ROOT)/requirements-dev.txt"' "$ROOT_DIR/Makefile"; then
+  printf '%s\n' "Makefile verification commands must resolve paths from the loaded Makefile." >&2
+  exit 1
+fi
+
+if ! grep -Eq '^\(cd "\$ROOT_DIR" && python3 -m py_compile parse\.py tests/test_parse\.py tests/test_xls_integration\.py\)$' "$ROOT_DIR/scripts/check-baseline.sh" ||
+  ! grep -Eq '^\(cd "\$ROOT_DIR" && python3 -m unittest discover -s tests -p "test\*\.py"\)$' "$ROOT_DIR/scripts/check-baseline.sh"; then
+  printf '%s\n' "Baseline checker Python probes must run from the repository root." >&2
+  exit 1
+fi
+
+if ! grep -Fq "status: completed" "$LOCATION_INDEPENDENT_MAKE_PLAN" ||
+  ! grep -Fq "from /tmp" "$LOCATION_INDEPENDENT_MAKE_PLAN"; then
+  printf '%s\n' "Location-independent Make plan must record completed status and external verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "absolute Makefile path" "$ROOT_DIR/README.md" ||
+  ! grep -Fq "working directory" "$ROOT_DIR/README.md" ||
+  ! grep -Fq "Make verification resolves repository paths" "$ROOT_DIR/VISION.md" ||
+  ! grep -Fq "External baseline" "$ROOT_DIR/AGENTS.md" ||
+  ! grep -Fq "Made Make verification independent" "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' "Project guidance must document location-independent Make verification." >&2
   exit 1
 fi
 

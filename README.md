@@ -167,3 +167,6 @@ When the required SDK or runtime is unavailable, use static checks and source re
 ## Contributing
 
 Keep changes small and tied to the project that is already present in this repository. For code changes, document the toolchain used, avoid committing generated dependency directories or local configuration, and update this README when setup or verification steps change.
+
+The full gate can also be invoked through an absolute Makefile path from another
+working directory: `make -f /path/to/Excel-Parser/Makefile check`.
