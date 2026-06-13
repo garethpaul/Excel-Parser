@@ -44,6 +44,25 @@ class FakeXlrd:
         return book
 
 
+class FakeBookWithoutRelease:
+    def __init__(self):
+        self.sheet_requested = False
+
+    def sheet_by_name(self, _sheet_name):
+        self.sheet_requested = True
+        raise AssertionError("sheet lookup must not occur")
+
+
+class FakeXlrdWithBook(FakeXlrd):
+    def __init__(self, book):
+        self.book = book
+        self.opened = []
+
+    def open_workbook(self, excel, on_demand=False):
+        self.opened.append((excel, on_demand, self.book))
+        return self.book
+
+
 class UnprintableValue:
     def __str__(self):
         raise RuntimeError("cannot stringify value")
@@ -242,6 +261,49 @@ class ExcelProcessorTests(unittest.TestCase):
             processor.process("fixture.xls", "People", False, [])
 
         self.assertTrue(fake_xlrd.opened[0][2].released)
+
+    def test_process_rejects_missing_release_hook_before_sheet_access(self):
+        book = FakeBookWithoutRelease()
+        fake_xlrd = FakeXlrdWithBook(book)
+        parse.xlrd = fake_xlrd
+        rows = []
+        completions = []
+        processor = parse.ExcelProcessor(
+            lambda rowid, values: rows.append((rowid, values)),
+            lambda: completions.append(True),
+        )
+
+        with self.assertRaisesRegex(
+            parse.InvalidDataException,
+            "Opened workbook must provide callable release_resources",
+        ):
+            processor.process("fixture.xls", "People", False, [])
+
+        self.assertFalse(book.sheet_requested)
+        self.assertEqual([], rows)
+        self.assertEqual([], completions)
+
+    def test_process_rejects_non_callable_release_hook_before_sheet_access(self):
+        book = FakeBookWithoutRelease()
+        book.release_resources = "not-callable"
+        fake_xlrd = FakeXlrdWithBook(book)
+        parse.xlrd = fake_xlrd
+        rows = []
+        completions = []
+        processor = parse.ExcelProcessor(
+            lambda rowid, values: rows.append((rowid, values)),
+            lambda: completions.append(True),
+        )
+
+        with self.assertRaisesRegex(
+            parse.InvalidDataException,
+            "Opened workbook must provide callable release_resources",
+        ):
+            processor.process("fixture.xls", "People", False, [])
+
+        self.assertFalse(book.sheet_requested)
+        self.assertEqual([], rows)
+        self.assertEqual([], completions)
 
     def test_process_allows_cell_empty_targets_to_skip_present_values(self):
         rows = [

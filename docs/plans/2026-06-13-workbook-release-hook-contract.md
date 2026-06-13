@@ -2,7 +2,7 @@
 title: Workbook Release Hook Contract
 type: reliability
 date: 2026-06-13
-status: in progress
+status: completed
 execution: code
 ---
 
@@ -37,3 +37,16 @@ that did not occur.
 
 - Changing callback signatures, row conversion behavior, or dependency pins.
 - Adding `.xlsx` support or private workbook fixtures.
+
+## Verification
+
+- Python 3.12.8 and Python 3.14.0 each passed the four focused lifecycle tests
+  and all 30 unit and generated real `.xls` integration tests.
+- `make check` passed under both pinned environments, including compilation and
+  dependency audits reporting no known vulnerabilities.
+- Seven hostile mutations were rejected across callable-hook validation,
+  optional cleanup, validation order, focused regressions, documentation, and
+  completed plan evidence.
+- Shell syntax, diff, exact-path, unchanged dependency/workflow, secret-like
+  addition, and generated-artifact inspections passed.
+- No private workbook data, external service, or live network request was used.

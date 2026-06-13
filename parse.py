@@ -44,6 +44,9 @@ class ExcelProcessor:
         has_header = self.validate_has_header(has_header)
 
         book = xlrd.open_workbook(excel, on_demand=True)
+        release_resources = getattr(book, "release_resources", None)
+        if not callable(release_resources):
+            raise InvalidDataException("Opened workbook must provide callable release_resources")
         try:
             sheet = book.sheet_by_name(sheet_name)
             rowno = 1 if has_header else 0
@@ -69,9 +72,7 @@ class ExcelProcessor:
                         raise
 
         finally:
-            release_resources = getattr(book, "release_resources", None)
-            if release_resources is not None:
-                release_resources()
+            release_resources()
         self.parsedonecallback()
 
     def validate_callbacks(self):
