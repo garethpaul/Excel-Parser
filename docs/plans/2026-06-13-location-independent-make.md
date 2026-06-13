@@ -2,7 +2,7 @@
 title: Location-Independent Make Verification
 type: reliability
 date: 2026-06-13
-status: in progress
+status: completed
 execution: code
 ---
 
@@ -31,3 +31,13 @@ gate works when invoked from outside the repository.
 ## Non-Goals
 
 - Changing parser callbacks, workbook behavior, dependency pins, or CI events.
+
+## Verification
+
+- Python 3.12.8 and pinned Python 3.14.0 `make check` each passed all 30
+  tests, compilation, and dependency audits with no known vulnerabilities.
+- The absolute Makefile path passed the complete gate from /tmp under the
+  pinned Python 3.14.0 environment.
+- Seven hostile path, checker-root, documentation, and completed-plan
+  mutations were rejected.
+- Shell syntax, diff, exact-path, secret, and generated-artifact checks passed.

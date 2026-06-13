@@ -52,6 +52,8 @@ Current baseline:
 - Missing workbook release hooks fail before sheet access or callback delivery.
 - GitHub Actions runs clean installs, the dependency audit, and `make check` on
   Python 3.10, 3.12, and 3.14.
+- Make verification resolves repository paths independently of the caller's
+  working directory.
 - Keep a credential-free checkout in the hosted verification workflow.
 - The hosted matrix processes a real synthetic `.xls` file through `xlrd`,
   covering header skipping, conversions, missing cells, and callback order.

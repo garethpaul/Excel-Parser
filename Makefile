@@ -1,15 +1,17 @@
 .PHONY: audit build check lint test
 
+ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+
 lint:
-	@scripts/check-baseline.sh
+	@"$(ROOT)/scripts/check-baseline.sh"
 
 test:
-	@python3 -m unittest discover -s tests -p "test*.py"
+	@cd "$(ROOT)" && python3 -m unittest discover -s tests -p "test*.py"
 
 build:
-	@python3 -m py_compile parse.py tests/test_parse.py tests/test_xls_integration.py
+	@python3 -m py_compile "$(ROOT)/parse.py" "$(ROOT)/tests/test_parse.py" "$(ROOT)/tests/test_xls_integration.py"
 
 audit:
-	@python3 -m pip_audit -r requirements.txt -r requirements-dev.txt
+	@python3 -m pip_audit -r "$(ROOT)/requirements.txt" -r "$(ROOT)/requirements-dev.txt"
 
 check: lint test build audit

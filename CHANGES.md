@@ -2,6 +2,7 @@
 
 ## 2026-06-13
 
+- Made Make verification independent of the caller's working directory.
 - Required a callable workbook release hook before sheet access and completion
   signaling.
 - Released workbook resources before invoking the parse-completion callback.

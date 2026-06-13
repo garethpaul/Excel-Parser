@@ -17,6 +17,7 @@
 - Supported runtime: Python 3.10 or newer; hosted verification covers Python 3.10, 3.12, and 3.14.
 - Install dependencies: `python3 -m pip install -r requirements.txt -r requirements-dev.txt`
 - Full baseline: `make check`
+- External baseline: `make -f /absolute/path/to/Makefile check`
 - Lint/static checks: `make lint`
 - Tests: `make test`
 - Build: `make build`
