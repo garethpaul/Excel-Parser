@@ -159,6 +159,10 @@ When the required SDK or runtime is unavailable, use static checks and source re
   configuration boundary.
 - See `docs/plans/2026-06-13-workbook-release-before-completion.md` for workbook
   cleanup ordering before completion signaling.
+- Opened workbook processing requires a callable resource-release hook before
+  sheet access or callback delivery.
+- See `docs/plans/2026-06-13-workbook-release-hook-contract.md` for the
+  fail-closed cleanup capability boundary.
 
 ## Contributing
 

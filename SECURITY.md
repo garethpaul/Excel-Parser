@@ -46,6 +46,9 @@ Workbook paths should be validated as non-empty .xls paths before opening files
 so unsupported or malformed workbook inputs fail before parser file resources are
 touched.
 
+An opened workbook with a missing or non-callable release hook must fail before
+sheet access or callbacks so completion never claims unperformed cleanup.
+
 Target cell types must be exact integer constants rather than booleans or
 numerically equal floats. Sheet names must be non-empty strings and header flags
 must be booleans before workbook resources are opened.

@@ -17,6 +17,7 @@ CHECKOUT_CREDENTIAL_PLAN="$ROOT_DIR/docs/plans/2026-06-12-checkout-credential-bo
 CALLBACK_VALIDATION_PLAN="$ROOT_DIR/docs/plans/2026-06-13-callback-validation.md"
 PYTHON3_RUNTIME_PLAN="$ROOT_DIR/docs/plans/2026-06-13-python3-runtime-baseline.md"
 COMPLETION_ORDER_PLAN="$ROOT_DIR/docs/plans/2026-06-13-workbook-release-before-completion.md"
+RELEASE_HOOK_PLAN="$ROOT_DIR/docs/plans/2026-06-13-workbook-release-hook-contract.md"
 
 cleanup_bytecode() {
   find "$ROOT_DIR" -maxdepth 3 -type d -name "__pycache__" -prune -exec rm -rf {} + 2>/dev/null || true
@@ -60,6 +61,7 @@ for path in \
   "docs/plans/2026-06-13-callback-validation.md" \
   "docs/plans/2026-06-13-python3-runtime-baseline.md" \
   "docs/plans/2026-06-13-workbook-release-before-completion.md" \
+  "docs/plans/2026-06-13-workbook-release-hook-contract.md" \
   "docs/plans/2026-06-08-fractional-int-conversion.md" \
   "docs/plans/2026-06-08-excel-parser-maintenance-baseline.md"; do
   require_file "$path"
@@ -78,6 +80,52 @@ if process.count(release) != 1 or process.count(completion) != 1:
 if process.index(release) > process.index(completion):
     raise SystemExit("Workbook resources must be released before parse completion is signaled.")
 PY
+
+python3 - "$ROOT_DIR/parse.py" <<'PY'
+import pathlib
+import sys
+
+source = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")
+process = source.split("    def process(", 1)[1].split("    def validate_callbacks", 1)[0]
+required = [
+    'release_resources = getattr(book, "release_resources", None)',
+    "if not callable(release_resources):",
+    'raise InvalidDataException("Opened workbook must provide callable release_resources")',
+    "sheet = book.sheet_by_name(sheet_name)",
+]
+positions = [process.find(item) for item in required]
+if -1 in positions or positions != sorted(positions):
+    raise SystemExit("Workbook release hook must be validated before sheet access.")
+if "if release_resources is not None:" in process:
+    raise SystemExit("Workbook release must not remain optional before completion.")
+PY
+
+for release_hook_contract in \
+  "test_process_rejects_missing_release_hook_before_sheet_access" \
+  "test_process_rejects_non_callable_release_hook_before_sheet_access" \
+  'self.assertFalse(book.sheet_requested)' \
+  'self.assertEqual([], completions)'; do
+  if ! grep -Fq "$release_hook_contract" "$ROOT_DIR/tests/test_parse.py"; then
+    printf '%s\n' "Workbook release-hook regression is missing: $release_hook_contract" >&2
+    exit 1
+  fi
+done
+
+if ! grep -Fq "status: completed" "$RELEASE_HOOK_PLAN" ||
+  ! grep -Fq "Python 3.12.8 and Python 3.14.0" "$RELEASE_HOOK_PLAN" ||
+  ! grep -Fq "hostile mutations were rejected" "$RELEASE_HOOK_PLAN"; then
+  printf '%s\n' "Workbook release-hook plan must record truthful completed verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "requires a callable resource-release hook" "$ROOT_DIR/README.md" ||
+  ! grep -Fq "missing or non-callable release hook" "$ROOT_DIR/SECURITY.md" ||
+  ! grep -Fq "Missing workbook release hooks fail before sheet access" "$ROOT_DIR/VISION.md" ||
+  ! grep -Fq "Required a callable workbook release hook" "$ROOT_DIR/CHANGES.md" ||
+  ! grep -Fq "Require callable workbook resource release" "$ROOT_DIR/AGENTS.md"; then
+  printf '%s\n' "Project guidance must preserve the fail-closed workbook release-hook contract." >&2
+  exit 1
+fi
 
 for completion_order_contract in \
   "test_process_releases_workbook_before_completion_callback" \

@@ -49,6 +49,7 @@ Current baseline:
 - Cell type constants, sheet names, and header flags are strictly typed before
   workbook files are opened.
 - Callback configuration fails fast before workbook files are opened.
+- Missing workbook release hooks fail before sheet access or callback delivery.
 - GitHub Actions runs clean installs, the dependency audit, and `make check` on
   Python 3.10, 3.12, and 3.14.
 - Keep a credential-free checkout in the hosted verification workflow.
