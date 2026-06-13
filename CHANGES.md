@@ -2,6 +2,10 @@
 
 ## 2026-06-13
 
+- Established Python 3.10 or newer as the maintained runtime and removed
+  dormant `basestring`, `long`, old-style class, and Python 2 compile branches.
+- Added a regression for the preserved `ExcelProcessor` constructor and
+  `process` callback signatures.
 - Validated parser callbacks before opening workbook files so invalid row,
   completion, and exception handlers fail through `InvalidDataException`.
 

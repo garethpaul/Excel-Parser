@@ -9,8 +9,8 @@
 rows from a named Excel sheet with `xlrd` and converting cell values into
 declared target types.
 
-The parser preserves a Python 2-era API, but `parse.py` is importable and
-unit-tested under Python 3 for offline conversion and callback behavior.
+The parser preserves its callback-driven API while using a maintained Python
+3.10-or-newer runtime for conversion, workbook integration, and callback tests.
 
 ## Repository Contents
 
@@ -29,8 +29,7 @@ unit-tested under Python 3 for offline conversion and callback behavior.
 ### Prerequisites
 
 - Git
-- Python 3 for local tests
-- Python 2.7 when validating legacy syntax
+- Python 3.10 or newer
 - `xlrd>=2.0.1,<3` when processing real `.xls` workbook files
 
 ### Setup
@@ -96,11 +95,11 @@ make build
 ```
 
 `make check` runs Python 3 unit tests with synthetic workbook data, including a
-temporary real `.xls` file, compiles the parser and tests under Python 3, and
-runs a Python 2 syntax check when `python2` is available. `make lint` runs the
-full maintenance baseline, `make test` runs the unittest suite, and `make
-build` compiles the parser and tests under Python 3. `make audit` checks the
-pinned runtime and verification dependencies for known vulnerabilities.
+temporary real `.xls` file, compiles the parser and tests, and audits pinned
+dependencies. `make lint` runs the full maintenance baseline, `make test` runs
+the unittest suite, and `make build` compiles the parser and tests. The public
+`ExcelProcessor` constructor and `process` callback signatures remain covered
+while dormant `basestring`, `long`, and Python 2 syntax branches are removed.
 GitHub Actions performs clean installs and runs the same `make check` baseline
 on Python 3.10, 3.12, and 3.14 for pushes, pull requests, and manual
 dispatches. Workflow actions are pinned by commit and repository access is

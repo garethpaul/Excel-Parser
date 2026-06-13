@@ -1,9 +1,10 @@
+import inspect
 import unittest
 
 import parse
 
 
-class FakeSheet(object):
+class FakeSheet:
     def __init__(self, rows):
         self.rows = rows
         self.nrows = len(rows)
@@ -15,7 +16,7 @@ class FakeSheet(object):
         return self.rows[rowid][cellid][1]
 
 
-class FakeBook(object):
+class FakeBook:
     def __init__(self, sheets):
         self.sheets = sheets
         self.released = False
@@ -27,7 +28,7 @@ class FakeBook(object):
         self.released = True
 
 
-class FakeXlrd(object):
+class FakeXlrd:
     XL_CELL_EMPTY = 0
     XL_CELL_TEXT = 1
     XL_CELL_NUMBER = 2
@@ -43,7 +44,7 @@ class FakeXlrd(object):
         return book
 
 
-class UnprintableValue(object):
+class UnprintableValue:
     def __str__(self):
         raise RuntimeError("cannot stringify value")
 
@@ -61,6 +62,21 @@ class ExcelProcessorTests(unittest.TestCase):
         row_callback = row_callback or (lambda _rowid, _values: None)
         done_callback = done_callback or (lambda: None)
         return parse.ExcelProcessor(row_callback, done_callback, exception_callback), fake_xlrd
+
+    def test_public_callback_api_signatures_are_preserved(self):
+        constructor = inspect.signature(parse.ExcelProcessor.__init__)
+        process = inspect.signature(parse.ExcelProcessor.process)
+
+        self.assertEqual(
+            ["self", "rowdatacallback", "parsedonecallback", "exceptioncallback"],
+            list(constructor.parameters),
+        )
+        self.assertEqual(
+            ["self", "excel", "sheet_name", "has_header", "cell_types"],
+            list(process.parameters),
+        )
+        self.assertIsNone(constructor.parameters["exceptioncallback"].default)
+        self.assertIsNone(process.parameters["cell_types"].default)
 
     def test_convert_type_handles_text_and_number_targets(self):
         processor, _fake_xlrd = self.processor([])
