@@ -59,6 +59,8 @@ this baseline.
   types such as `ExcelProcessor.CELL_TEXT`, `CELL_INT`, and `CELL_FLOAT`.
 - Callbacks are validated before opening a workbook. Row and completion
   callbacks must be callable; the exception callback must be callable or `None`.
+- Workbook resources are released before the parse-completion callback runs,
+  including when that callback raises.
 - Use `ExcelProcessor.CELL_EMPTY` in `cell_types` to ignore a present source
   cell and receive `None` for that output position.
 - Target cell type declarations are validated before opening workbooks, so
@@ -155,6 +157,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   checkout token boundary.
 - See `docs/plans/2026-06-13-callback-validation.md` for the fail-fast callback
   configuration boundary.
+- See `docs/plans/2026-06-13-workbook-release-before-completion.md` for workbook
+  cleanup ordering before completion signaling.
 
 ## Contributing
 

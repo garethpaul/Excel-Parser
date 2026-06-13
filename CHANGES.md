@@ -2,6 +2,7 @@
 
 ## 2026-06-13
 
+- Released workbook resources before invoking the parse-completion callback.
 - Established Python 3.10 or newer as the maintained runtime and removed
   dormant `basestring`, `long`, old-style class, and Python 2 compile branches.
 - Added a regression for the preserved `ExcelProcessor` constructor and

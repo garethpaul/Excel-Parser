@@ -215,6 +215,34 @@ class ExcelProcessorTests(unittest.TestCase):
         ], received)
         self.assertEqual([True], done)
 
+    def test_process_releases_workbook_before_completion_callback(self):
+        completion_states = []
+        fake_xlrd = None
+
+        def done_callback():
+            book = fake_xlrd.opened[0][2]
+            completion_states.append(book.released)
+
+        processor, fake_xlrd = self.processor([], done_callback=done_callback)
+
+        processor.process("fixture.xls", "People", False, [])
+
+        self.assertEqual([True], completion_states)
+
+    def test_process_releases_workbook_before_raising_completion_callback(self):
+        fake_xlrd = None
+
+        def done_callback():
+            self.assertTrue(fake_xlrd.opened[0][2].released)
+            raise RuntimeError("completion failed")
+
+        processor, fake_xlrd = self.processor([], done_callback=done_callback)
+
+        with self.assertRaisesRegex(RuntimeError, "completion failed"):
+            processor.process("fixture.xls", "People", False, [])
+
+        self.assertTrue(fake_xlrd.opened[0][2].released)
+
     def test_process_allows_cell_empty_targets_to_skip_present_values(self):
         rows = [
             [(FakeXlrd.XL_CELL_TEXT, "skip"), (FakeXlrd.XL_CELL_TEXT, " Keep ")],
