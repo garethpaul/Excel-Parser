@@ -2,6 +2,8 @@
 
 ## 2026-06-14
 
+- Added pinned, least-privilege CodeQL analysis for GitHub Actions and Python
+  to the hosted workflow.
 - Limited target schemas to 256 target columns and bounded iterable
   normalization before workbook access.
 

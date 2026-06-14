@@ -109,6 +109,8 @@ on Python 3.10, 3.12, and 3.14 for pushes, pull requests, and manual
 dispatches. Workflow actions are pinned by commit and repository access is
 read-only. The workflow does not persist checkout credentials after source
 retrieval.
+The same workflow runs pinned CodeQL analysis for GitHub Actions and Python;
+only that job receives `security-events: write` to upload results.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
 
@@ -155,6 +157,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - See `docs/plans/2026-06-09-workbook-path-validation.md` for workbook path
   validation before workbook access.
 - See `docs/plans/2026-06-10-ci-baseline.md` for the GitHub Actions baseline.
+- See `docs/plans/2026-06-14-codeql-analysis.md` for the pinned,
+  least-privilege code-scanning contract.
 - See `docs/plans/2026-06-10-processing-option-validation.md` for strict cell
   type, sheet name, and header flag validation before workbook access.
 - See `docs/plans/2026-06-12-real-xls-integration-coverage.md` for the real

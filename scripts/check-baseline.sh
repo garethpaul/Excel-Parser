@@ -21,6 +21,7 @@ RELEASE_HOOK_PLAN="$ROOT_DIR/docs/plans/2026-06-13-workbook-release-hook-contrac
 LOCATION_INDEPENDENT_MAKE_PLAN="$ROOT_DIR/docs/plans/2026-06-13-location-independent-make.md"
 TARGET_TYPE_BUDGET_PLAN="$ROOT_DIR/docs/plans/2026-06-14-target-cell-type-budget.md"
 CONTROL_CHARACTER_PLAN="$ROOT_DIR/docs/plans/2026-06-14-control-character-error-summaries.md"
+CODEQL_PLAN="$ROOT_DIR/docs/plans/2026-06-14-codeql-analysis.md"
 
 require_file() {
   path=$1
@@ -61,6 +62,7 @@ for path in \
   "docs/plans/2026-06-13-location-independent-make.md" \
   "docs/plans/2026-06-14-target-cell-type-budget.md" \
   "docs/plans/2026-06-14-control-character-error-summaries.md" \
+  "docs/plans/2026-06-14-codeql-analysis.md" \
   "docs/plans/2026-06-08-fractional-int-conversion.md" \
   "docs/plans/2026-06-08-excel-parser-maintenance-baseline.md"; do
   require_file "$path"
@@ -290,6 +292,13 @@ fi
 
 if ! grep -Fq "actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10" "$CI_WORKFLOW" ||
   ! grep -Fq "actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405" "$CI_WORKFLOW" ||
+  ! grep -Fq 'name: CodeQL (${{ matrix.language }})' "$CI_WORKFLOW" ||
+  ! grep -Fq "security-events: write" "$CI_WORKFLOW" ||
+  ! grep -Fq "language: [actions, python]" "$CI_WORKFLOW" ||
+  ! grep -Fq "github/codeql-action/init@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4" "$CI_WORKFLOW" ||
+  ! grep -Fq 'languages: ${{ matrix.language }}' "$CI_WORKFLOW" ||
+  ! grep -Fq "build-mode: none" "$CI_WORKFLOW" ||
+  ! grep -Fq "github/codeql-action/analyze@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4" "$CI_WORKFLOW" ||
   ! grep -Fq 'python-version: ["3.10", "3.12", "3.14"]' "$CI_WORKFLOW" ||
   ! grep -Fq 'python-version: ${{ matrix.python-version }}' "$CI_WORKFLOW" ||
   ! grep -Fq "python -m pip install -r requirements.txt -r requirements-dev.txt" "$CI_WORKFLOW" ||
@@ -303,22 +312,45 @@ if ! grep -Fq "actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10" "$CI_W
   exit 1
 fi
 
-if [ "$(grep -Fc "uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10" "$CI_WORKFLOW")" -ne 1 ] ||
-  [ "$(grep -Fc "persist-credentials: false" "$CI_WORKFLOW")" -ne 1 ]; then
-  printf '%s\n' "GitHub Actions must use one pinned checkout without persisting credentials." >&2
+if [ "$(grep -Fc "uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10" "$CI_WORKFLOW")" -ne 2 ] ||
+  [ "$(grep -Fc "persist-credentials: false" "$CI_WORKFLOW")" -ne 2 ] ||
+  [ "$(grep -Fc "security-events: write" "$CI_WORKFLOW")" -ne 1 ] ||
+  [ "$(grep -Fc "github/codeql-action/" "$CI_WORKFLOW")" -ne 2 ]; then
+  printf '%s\n' "GitHub Actions must use two pinned credential-free checkouts and one CodeQL upload permission." >&2
   exit 1
 fi
 
 if ! awk '
-  /uses: actions\/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10/ { checkout = 1; next }
+  /uses: actions\/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10/ { checkout = 1; options = 0; next }
   checkout && /^[[:space:]]+with:[[:space:]]*$/ { options = 1; next }
-  checkout && options && /^[[:space:]]+persist-credentials: false[[:space:]]*$/ { protected = 1; next }
-  checkout && /^[[:space:]]+- / { exit }
-  END { exit protected ? 0 : 1 }
+  checkout && options && /^[[:space:]]+persist-credentials: false[[:space:]]*$/ { protected += 1; checkout = 0; options = 0; next }
+  checkout && /^[[:space:]]+- / { checkout = 0; options = 0 }
+  END { exit protected == 2 ? 0 : 1 }
 ' "$CI_WORKFLOW"; then
-  printf '%s\n' "Checkout credential persistence must be disabled on the pinned checkout step." >&2
+  printf '%s\n' "Checkout credential persistence must be disabled on both pinned checkout steps." >&2
   exit 1
 fi
+
+if ! grep -Fq "Status: Completed" "$CODEQL_PLAN" ||
+  ! grep -Fq 'The repository and external-directory `make check` passed.' "$CODEQL_PLAN" ||
+  ! grep -Fq "hostile CodeQL workflow mutations were rejected" "$CODEQL_PLAN"; then
+  printf '%s\n' "CodeQL plan must record completed status and verification." >&2
+  exit 1
+fi
+
+for codeql_evidence in \
+  "$ROOT_DIR/README.md:GitHub Actions and Python" \
+  "$ROOT_DIR/README.md:security-events: write" \
+  "$ROOT_DIR/SECURITY.md:Pinned CodeQL analysis" \
+  "$ROOT_DIR/VISION.md:Keep pinned CodeQL coverage" \
+  "$ROOT_DIR/CHANGES.md:least-privilege CodeQL analysis"; do
+  evidence_file=${codeql_evidence%%:*}
+  evidence_contract=${codeql_evidence#*:}
+  if ! grep -Fq -- "$evidence_contract" "$evidence_file"; then
+    printf '%s\n' "$evidence_file is missing CodeQL evidence: $evidence_contract" >&2
+    exit 1
+  fi
+done
 
 if ! grep -Fxq "xlrd==2.0.2" "$ROOT_DIR/requirements.txt" ||
   ! grep -Fxq "pip-audit==2.10.0" "$ROOT_DIR/requirements-dev.txt" ||

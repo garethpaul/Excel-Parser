@@ -57,6 +57,8 @@ Current baseline:
 - Make verification resolves repository paths independently of the caller's
   working directory.
 - Keep a credential-free checkout in the hosted verification workflow.
+- Keep pinned CodeQL coverage for GitHub Actions and Python with job-scoped
+  upload permission.
 - The hosted matrix processes a real synthetic `.xls` file through `xlrd`,
   covering header skipping, conversions, missing cells, and callback order.
 - Date conversion remains explicitly unsupported.
