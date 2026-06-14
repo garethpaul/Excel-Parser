@@ -44,6 +44,8 @@ Current baseline:
 - Conversion errors summarize long, multiline, or unprintable values before caller error
   handlers receive them.
 - Target cell type declarations fail fast before workbook files are opened.
+- Target schemas are limited to 256 target columns and normalized with bounded
+  input consumption before workbook files are opened.
 - Workbook paths are validated before workbook files are opened and remain scoped
   to non-empty `.xls` paths.
 - Cell type constants, sheet names, and header flags are strictly typed before

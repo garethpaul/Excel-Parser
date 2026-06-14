@@ -42,6 +42,9 @@ values before they reach logs or caller error handlers.
 Target cell type declarations should be validated before opening workbook files
 so invalid schemas do not touch parser file resources.
 
+Target schemas are limited to 256 target columns, and iterable declarations
+must be bounded before workbook files are opened.
+
 Workbook paths should be validated as non-empty .xls paths before opening files
 so unsupported or malformed workbook inputs fail before parser file resources are
 touched.

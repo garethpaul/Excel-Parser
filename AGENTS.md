@@ -48,6 +48,7 @@
 - Parser errors should avoid dumping full row contents unless a caller explicitly asks for that behavior.
 - Real workbook paths must be non-empty `.xls` paths; `.xlsx` support is not part of the current `xlrd` 2.x contract.
 - Validate the sheet name, boolean header flag, and exact integer target-type constants before opening a workbook. Do not accept booleans or numerically equivalent floats as schema aliases.
+- Limit target schemas to 256 target columns and keep iterable normalization bounded before workbook access.
 - Preserve strict conversion behavior: reject fractional integer conversions, blank or malformed numeric text, non-string text cells, non-finite numbers, unsupported dates, and unprintable or oversized raw values in errors.
 - Keep `xlrd` and `pip-audit` pinned through reviewed dependency changes that pass the full Python matrix.
 - Require callable workbook resource release before sheet access or completion

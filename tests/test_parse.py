@@ -350,6 +350,53 @@ class ExcelProcessorTests(unittest.TestCase):
 
         self.assertEqual([], fake_xlrd.opened)
 
+    def test_process_accepts_exact_xls_target_column_limit(self):
+        processor, fake_xlrd = self.processor([])
+
+        processor.process(
+            "fixture.xls",
+            "People",
+            False,
+            [parse.ExcelProcessor.CELL_EMPTY] * parse.MAX_TARGET_COLUMNS,
+        )
+
+        self.assertEqual(1, len(fake_xlrd.opened))
+        self.assertEqual(("fixture.xls", True), fake_xlrd.opened[0][:2])
+
+    def test_process_rejects_target_columns_above_xls_limit_before_opening_workbook(self):
+        processor, fake_xlrd = self.processor([])
+
+        with self.assertRaisesRegex(
+            parse.InvalidDataException,
+            "Target cell types cannot exceed 256 columns",
+        ):
+            processor.process(
+                "fixture.xls",
+                "People",
+                False,
+                [parse.ExcelProcessor.CELL_EMPTY] * (parse.MAX_TARGET_COLUMNS + 1),
+            )
+
+        self.assertEqual([], fake_xlrd.opened)
+
+    def test_process_bounds_unbounded_target_type_iterables_before_workbook_access(self):
+        processor, fake_xlrd = self.processor([])
+        consumed = []
+
+        def unbounded_cell_types():
+            while True:
+                consumed.append(True)
+                yield parse.ExcelProcessor.CELL_EMPTY
+
+        with self.assertRaisesRegex(
+            parse.InvalidDataException,
+            "Target cell types cannot exceed 256 columns",
+        ):
+            processor.process("fixture.xls", "People", False, unbounded_cell_types())
+
+        self.assertEqual(parse.MAX_TARGET_COLUMNS + 1, len(consumed))
+        self.assertEqual([], fake_xlrd.opened)
+
     def test_process_rejects_non_xls_workbook_path_before_opening_workbook(self):
         processor, fake_xlrd = self.processor([])
 

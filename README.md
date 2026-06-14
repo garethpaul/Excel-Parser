@@ -57,6 +57,8 @@ this baseline.
   from `parse.py`.
 - Call `process(path, sheet_name, has_header, cell_types)` with target cell
   types such as `ExcelProcessor.CELL_TEXT`, `CELL_INT`, and `CELL_FLOAT`.
+- Target schemas are limited to 256 target columns, and iterable inputs are
+  bounded before workbook files are opened.
 - Callbacks are validated before opening a workbook. Row and completion
   callbacks must be callable; the exception callback must be callable or `None`.
 - Workbook resources are released before the parse-completion callback runs,
@@ -146,6 +148,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   conversion error value summaries.
 - See `docs/plans/2026-06-09-target-cell-type-validation.md` for target cell
   type validation before workbook access.
+- See `docs/plans/2026-06-14-target-cell-type-budget.md` for bounded target
+  schema normalization.
 - See `docs/plans/2026-06-09-workbook-path-validation.md` for workbook path
   validation before workbook access.
 - See `docs/plans/2026-06-10-ci-baseline.md` for the GitHub Actions baseline.

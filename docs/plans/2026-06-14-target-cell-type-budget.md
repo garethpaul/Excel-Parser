@@ -2,7 +2,7 @@
 title: Target Cell Type Budget
 type: reliability
 date: 2026-06-14
-status: planned
+status: completed
 execution: code
 ---
 
@@ -40,13 +40,20 @@ opening a workbook instead of eagerly materializing arbitrary input.
 - Changing row conversion, callback, completion, or workbook-release behavior.
 - Adding dependencies or modifying the lock-free requirements files.
 
-## Planned Verification
+## Verification
 
-- Focused parser unit tests for 256 entries, 257 entries, and an unbounded
-  iterable with a consumption counter.
-- Full `make check` on available Python runtimes and from an external working
-  directory.
-- Isolated hostile mutations for the limit, bounded probe, overflow rejection,
-  test coverage, documentation, and completed-plan evidence.
+- Focused parser unit tests passed on Python 3.12.8 and Python 3.14 for 256
+  entries, 257 entries, and an unbounded iterable with a consumption counter.
+- A baseline preflight passed with the completed-plan contract enabled.
+- Six isolated hostile mutations were rejected for the limit, bounded probe,
+  overflow rejection, test coverage, documentation, and completed-plan
+  evidence.
+- Full `make check` passed on Python 3.12.8 and in an isolated Python 3.14
+  environment; each run executed 33 tests and reported no known dependency
+  vulnerabilities.
+- `make check` also passed when invoked from `/tmp` with the repository's
+  absolute Makefile path.
 - Exact intended-path, bytecode artifact, whitespace, conflict-marker, and
-  changed-line credential-pattern audits.
+  changed-line credential-pattern audits passed before commit.
+- Baseline cleanup was narrowed to existence-checked `__pycache__` and
+  `tests/__pycache__` paths; no broad artifact deletion is used.
