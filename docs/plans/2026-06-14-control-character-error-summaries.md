@@ -2,7 +2,7 @@
 title: Control Character Error Summaries
 type: security
 date: 2026-06-14
-status: in-progress
+status: completed
 execution: code
 ---
 
@@ -43,4 +43,17 @@ error-value contract.
 
 ## Verification
 
-- Pending implementation and bounded validation.
+- Six focused conversion-error tests passed for existing length and multiline
+  behavior, control-character escaping, printable Unicode, complete-token
+  truncation, and unprintable values.
+- Full `make test` passed 36 unit and real-workbook integration tests from the
+  repository and through the absolute Makefile path from an external working
+  directory.
+- `make build` compiled the parser and tests, and `make audit` reported no
+  known vulnerabilities in the pinned runtime and development dependencies.
+- Six isolated hostile mutations were rejected across escaping, complete-token
+  budgeting, executable tests, documentation, and completed-plan evidence.
+- The static gate no longer recursively deletes bytecode directories; final
+  cleanup uses only enumerated, existence-checked generated file paths.
+- Full `make check`, final artifact and secret audits, and exact diff review are
+  recorded before delivery.

@@ -37,7 +37,8 @@ Non-string text cells should fail through `InvalidDataException` before parser
 callbacks receive converted values or raw interpreter errors.
 
 Conversion error messages should summarize long, multiline, or unprintable cell
-values before they reach logs or caller error handlers.
+values and escape terminal or log control characters before they reach logs or
+caller error handlers.
 
 Target cell type declarations should be validated before opening workbook files
 so invalid schemas do not touch parser file resources.

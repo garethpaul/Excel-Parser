@@ -20,16 +20,7 @@ COMPLETION_ORDER_PLAN="$ROOT_DIR/docs/plans/2026-06-13-workbook-release-before-c
 RELEASE_HOOK_PLAN="$ROOT_DIR/docs/plans/2026-06-13-workbook-release-hook-contract.md"
 LOCATION_INDEPENDENT_MAKE_PLAN="$ROOT_DIR/docs/plans/2026-06-13-location-independent-make.md"
 TARGET_TYPE_BUDGET_PLAN="$ROOT_DIR/docs/plans/2026-06-14-target-cell-type-budget.md"
-
-cleanup_bytecode() {
-  for artifact_dir in "$ROOT_DIR/__pycache__" "$ROOT_DIR/tests/__pycache__"; do
-    if [ -d "$artifact_dir" ]; then
-      rm -rf -- "$artifact_dir"
-    fi
-  done
-}
-
-trap cleanup_bytecode EXIT
+CONTROL_CHARACTER_PLAN="$ROOT_DIR/docs/plans/2026-06-14-control-character-error-summaries.md"
 
 require_file() {
   path=$1
@@ -69,6 +60,7 @@ for path in \
   "docs/plans/2026-06-13-workbook-release-hook-contract.md" \
   "docs/plans/2026-06-13-location-independent-make.md" \
   "docs/plans/2026-06-14-target-cell-type-budget.md" \
+  "docs/plans/2026-06-14-control-character-error-summaries.md" \
   "docs/plans/2026-06-08-fractional-int-conversion.md" \
   "docs/plans/2026-06-08-excel-parser-maintenance-baseline.md"; do
   require_file "$path"
@@ -185,8 +177,28 @@ if ! grep -Fq "non-string text cells" "$ROOT_DIR/README.md"; then
   exit 1
 fi
 
-if ! grep -Fq "Conversion errors summarize long, multiline, or unprintable values" "$ROOT_DIR/README.md"; then
+if ! grep -Fq "Conversion errors summarize long, multiline, or unprintable values and escape" "$ROOT_DIR/README.md"; then
   printf '%s\n' "README must document conversion error value summaries." >&2
+  exit 1
+fi
+
+for control_character_contract in \
+  'character.isprintable()' \
+  'repr(character)[1:-1]' \
+  'summary_length + len(token) > MAX_ERROR_VALUE_LENGTH' \
+  'test_conversion_errors_escape_control_characters' \
+  'test_conversion_error_summary_preserves_printable_unicode' \
+  'test_conversion_error_summary_bounds_complete_escape_tokens'; do
+  if ! grep -Fq "$control_character_contract" "$ROOT_DIR/parse.py" "$ROOT_DIR/tests/test_parse.py"; then
+    printf '%s\n' "Control-character error-summary contract is missing: $control_character_contract" >&2
+    exit 1
+  fi
+done
+
+if ! grep -Fq "status: completed" "$CONTROL_CHARACTER_PLAN" ||
+  ! grep -Fq "make check" "$CONTROL_CHARACTER_PLAN" ||
+  ! grep -Fq "hostile mutations" "$CONTROL_CHARACTER_PLAN"; then
+  printf '%s\n' "Control-character error-summary plan must remain completed with verification recorded." >&2
   exit 1
 fi
 
@@ -261,7 +273,7 @@ if ! grep -Fq "Non-string text cells" "$ROOT_DIR/SECURITY.md"; then
   exit 1
 fi
 
-if ! grep -Fq "Conversion error messages should summarize" "$ROOT_DIR/SECURITY.md"; then
+if ! grep -Fq "escape terminal or log control characters" "$ROOT_DIR/SECURITY.md"; then
   printf '%s\n' "SECURITY must document conversion error value summaries." >&2
   exit 1
 fi

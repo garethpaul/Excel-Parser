@@ -155,6 +155,35 @@ class ExcelProcessorTests(unittest.TestCase):
         self.assertNotIn("\r", message)
         self.assertNotIn("\n", message)
 
+    def test_conversion_errors_escape_control_characters(self):
+        processor, _fake_xlrd = self.processor([])
+
+        with self.assertRaises(parse.InvalidDataException) as context:
+            processor.convert_type(
+                FakeXlrd.XL_CELL_TEXT,
+                parse.ExcelProcessor.CELL_INT,
+                "bad\x1b[31m\tvalue\x00",
+            )
+
+        message = str(context.exception)
+        self.assertIn(r"bad\x1b[31m\tvalue\x00", message)
+        self.assertNotIn("\x1b", message)
+        self.assertNotIn("\t", message)
+        self.assertNotIn("\x00", message)
+
+    def test_conversion_error_summary_preserves_printable_unicode(self):
+        processor, _fake_xlrd = self.processor([])
+
+        self.assertEqual("caf\u00e9", processor.format_error_value("caf\u00e9"))
+
+    def test_conversion_error_summary_bounds_complete_escape_tokens(self):
+        processor, _fake_xlrd = self.processor([])
+
+        summary = processor.format_error_value("\x00" * 21)
+
+        self.assertEqual((r"\x00" * 20) + "...", summary)
+        self.assertEqual(parse.MAX_ERROR_VALUE_LENGTH + 3, len(summary))
+
     def test_conversion_errors_handle_unprintable_values(self):
         processor, _fake_xlrd = self.processor([])
 
