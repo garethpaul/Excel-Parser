@@ -19,10 +19,14 @@ PYTHON3_RUNTIME_PLAN="$ROOT_DIR/docs/plans/2026-06-13-python3-runtime-baseline.m
 COMPLETION_ORDER_PLAN="$ROOT_DIR/docs/plans/2026-06-13-workbook-release-before-completion.md"
 RELEASE_HOOK_PLAN="$ROOT_DIR/docs/plans/2026-06-13-workbook-release-hook-contract.md"
 LOCATION_INDEPENDENT_MAKE_PLAN="$ROOT_DIR/docs/plans/2026-06-13-location-independent-make.md"
+TARGET_TYPE_BUDGET_PLAN="$ROOT_DIR/docs/plans/2026-06-14-target-cell-type-budget.md"
 
 cleanup_bytecode() {
-  find "$ROOT_DIR" -maxdepth 3 -type d -name "__pycache__" -prune -exec rm -rf {} + 2>/dev/null || true
-  find "$ROOT_DIR" -maxdepth 3 -type f -name "*.pyc" -delete 2>/dev/null || true
+  for artifact_dir in "$ROOT_DIR/__pycache__" "$ROOT_DIR/tests/__pycache__"; do
+    if [ -d "$artifact_dir" ]; then
+      rm -rf -- "$artifact_dir"
+    fi
+  done
 }
 
 trap cleanup_bytecode EXIT
@@ -64,6 +68,7 @@ for path in \
   "docs/plans/2026-06-13-workbook-release-before-completion.md" \
   "docs/plans/2026-06-13-workbook-release-hook-contract.md" \
   "docs/plans/2026-06-13-location-independent-make.md" \
+  "docs/plans/2026-06-14-target-cell-type-budget.md" \
   "docs/plans/2026-06-08-fractional-int-conversion.md" \
   "docs/plans/2026-06-08-excel-parser-maintenance-baseline.md"; do
   require_file "$path"
@@ -559,6 +564,33 @@ if ! grep -Fq "status: completed" "$LOCATION_INDEPENDENT_MAKE_PLAN" ||
   printf '%s\n' "Location-independent Make plan must record completed status and external verification." >&2
   exit 1
 fi
+
+for target_type_budget_contract in \
+  "MAX_TARGET_COLUMNS = 256" \
+  "islice(iter(cell_types), MAX_TARGET_COLUMNS + 1)" \
+  "Target cell types cannot exceed" \
+  "test_process_accepts_exact_xls_target_column_limit" \
+  "test_process_rejects_target_columns_above_xls_limit_before_opening_workbook" \
+  "test_process_bounds_unbounded_target_type_iterables_before_workbook_access"; do
+  if ! grep -Fq "$target_type_budget_contract" "$ROOT_DIR/parse.py" "$ROOT_DIR/tests/test_parse.py"; then
+    printf '%s\n' "Target cell type budget contract is missing: $target_type_budget_contract" >&2
+    exit 1
+  fi
+done
+
+if ! grep -Fq "status: completed" "$TARGET_TYPE_BUDGET_PLAN" ||
+  ! grep -Fq "make check" "$TARGET_TYPE_BUDGET_PLAN" ||
+  ! grep -Fq "hostile mutations were rejected" "$TARGET_TYPE_BUDGET_PLAN"; then
+  printf '%s\n' "Target cell type budget plan must record completed verification." >&2
+  exit 1
+fi
+
+for document in "$ROOT_DIR/README.md" "$ROOT_DIR/SECURITY.md" "$ROOT_DIR/VISION.md" "$ROOT_DIR/CHANGES.md" "$ROOT_DIR/AGENTS.md"; do
+  if ! grep -Fq "256 target columns" "$document"; then
+    printf '%s\n' "$document must document the 256 target columns boundary." >&2
+    exit 1
+  fi
+done
 
 if ! grep -Fq "absolute Makefile path" "$ROOT_DIR/README.md" ||
   ! grep -Fq "working directory" "$ROOT_DIR/README.md" ||

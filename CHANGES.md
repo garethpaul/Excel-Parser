@@ -1,5 +1,10 @@
 # Changes
 
+## 2026-06-14
+
+- Limited target schemas to 256 target columns and bounded iterable
+  normalization before workbook access.
+
 ## 2026-06-13
 
 - Made Make verification independent of the caller's working directory.

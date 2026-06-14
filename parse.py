@@ -1,4 +1,5 @@
 import math
+from itertools import islice
 
 
 class _MissingXlrd:
@@ -17,6 +18,7 @@ except ImportError:
     xlrd = _MissingXlrd()
 
 MAX_ERROR_VALUE_LENGTH = 80
+MAX_TARGET_COLUMNS = 256
 
 
 class InvalidDataException(Exception):
@@ -121,9 +123,14 @@ class ExcelProcessor:
             return []
 
         try:
-            normalized = list(cell_types)
+            normalized = list(islice(iter(cell_types), MAX_TARGET_COLUMNS + 1))
         except TypeError:
             raise InvalidDataException("Target cell types must be iterable")
+
+        if len(normalized) > MAX_TARGET_COLUMNS:
+            raise InvalidDataException(
+                "Target cell types cannot exceed " + str(MAX_TARGET_COLUMNS) + " columns"
+            )
 
         for cell_type in normalized:
             if (
