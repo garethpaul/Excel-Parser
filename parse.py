@@ -204,6 +204,12 @@ class ExcelProcessor:
             return "<unprintable>"
 
         value = " ".join(value.splitlines())
-        if len(value) > MAX_ERROR_VALUE_LENGTH:
-            return value[:MAX_ERROR_VALUE_LENGTH] + "..."
-        return value
+        summary = []
+        summary_length = 0
+        for character in value:
+            token = character if character.isprintable() else repr(character)[1:-1]
+            if summary_length + len(token) > MAX_ERROR_VALUE_LENGTH:
+                return "".join(summary) + "..."
+            summary.append(token)
+            summary_length += len(token)
+        return "".join(summary)

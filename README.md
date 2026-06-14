@@ -82,8 +82,8 @@ this baseline.
   integer, or float conversion.
 - Non-finite numeric values such as `nan` and `inf` are rejected before they
   reach callbacks, including when numeric cells are requested as text.
-- Conversion errors summarize long, multiline, or unprintable values before raising
-  `InvalidDataException`.
+- Conversion errors summarize long, multiline, or unprintable values and escape
+  terminal or log control characters before raising `InvalidDataException`.
 - Date conversion is intentionally unsupported and raises
   `InvalidDataException`.
 
@@ -146,6 +146,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   text-cell validation.
 - See `docs/plans/2026-06-09-conversion-error-value-summary.md` for bounded
   conversion error value summaries.
+- See `docs/plans/2026-06-14-control-character-error-summaries.md` for escaped
+  control characters in parser diagnostics.
 - See `docs/plans/2026-06-09-target-cell-type-validation.md` for target cell
   type validation before workbook access.
 - See `docs/plans/2026-06-14-target-cell-type-budget.md` for bounded target
