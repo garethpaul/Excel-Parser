@@ -62,6 +62,7 @@ Current baseline:
 - The hosted matrix processes a real synthetic `.xls` file through `xlrd`,
   covering header skipping, conversions, missing cells, and callback order.
 - Date conversion remains explicitly unsupported.
+- Unsupported date targets are rejected before workbook access.
 
 Next priorities:
 

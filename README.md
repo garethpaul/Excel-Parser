@@ -86,6 +86,7 @@ this baseline.
   terminal or log control characters before raising `InvalidDataException`.
 - Date conversion is intentionally unsupported and raises
   `InvalidDataException`.
+- Unsupported date targets are rejected before workbook access.
 
 ## Testing and Verification
 

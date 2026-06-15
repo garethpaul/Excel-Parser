@@ -50,6 +50,7 @@
 - Validate the sheet name, boolean header flag, and exact integer target-type constants before opening a workbook. Do not accept booleans or numerically equivalent floats as schema aliases.
 - Limit target schemas to 256 target columns and keep iterable normalization bounded before workbook access.
 - Preserve strict conversion behavior: reject fractional integer conversions, blank or malformed numeric text, non-string text cells, non-finite numbers, unsupported dates, and unprintable, control-character-bearing, or oversized raw values in errors.
+- Unsupported date targets are rejected before workbook access.
 - Keep `xlrd` and `pip-audit` pinned through reviewed dependency changes that pass the full Python matrix.
 - Require callable workbook resource release before sheet access or completion
   callback delivery.

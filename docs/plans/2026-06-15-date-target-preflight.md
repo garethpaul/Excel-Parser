@@ -1,7 +1,7 @@
 ---
 title: Date Target Preflight
 type: reliability
-status: in_progress
+status: completed
 date: 2026-06-15
 execution: code
 ---
@@ -48,3 +48,25 @@ errors instead of one deterministic preflight failure.
   workbook ordering, error text, documentation, and completed-plan status.
 - Audit generated artifacts, secrets, exact intended paths, and dependency or
   workflow drift before committing.
+
+## Work Completed
+
+- Added `SUPPORTED_TARGET_CELL_TYPES` while preserving the existing public
+  constants and `VALID_CELL_TYPES` declaration set.
+- Rejected date-only and mixed date target schemas with a stable
+  `InvalidDataException` before `xlrd.open_workbook()`.
+- Preserved direct target/source date conversion rejection and all callback and
+  process signatures.
+- Added focused regressions, static contracts, and synchronized project
+  guidance.
+
+## Verification Completed
+
+- Root and external-directory `make check` passed all 38 unit and real `.xls`
+  integration tests, Ruff checks, source compilation, and dependency audit.
+- The dependency audit reported no known vulnerabilities.
+- Eight isolated hostile mutations were rejected for supported-target
+  separation, the date guard, both focused regressions, stable error text,
+  pre-open ordering, documentation, and reopened plan status.
+- Shell syntax, `git diff --check`, exact-path review, generated-artifact and
+  secret-pattern audits, and staged-path review passed before delivery.

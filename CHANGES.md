@@ -1,5 +1,9 @@
 # Changes
 
+## 2026-06-15
+
+- Unsupported date targets are rejected before workbook access.
+
 ## 2026-06-14
 
 - Added pinned, least-privilege CodeQL analysis for GitHub Actions and Python

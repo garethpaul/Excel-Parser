@@ -22,6 +22,7 @@ LOCATION_INDEPENDENT_MAKE_PLAN="$ROOT_DIR/docs/plans/2026-06-13-location-indepen
 TARGET_TYPE_BUDGET_PLAN="$ROOT_DIR/docs/plans/2026-06-14-target-cell-type-budget.md"
 CONTROL_CHARACTER_PLAN="$ROOT_DIR/docs/plans/2026-06-14-control-character-error-summaries.md"
 CODEQL_PLAN="$ROOT_DIR/docs/plans/2026-06-14-codeql-analysis.md"
+DATE_TARGET_PLAN="$ROOT_DIR/docs/plans/2026-06-15-date-target-preflight.md"
 
 require_file() {
   path=$1
@@ -63,9 +64,42 @@ for path in \
   "docs/plans/2026-06-14-target-cell-type-budget.md" \
   "docs/plans/2026-06-14-control-character-error-summaries.md" \
   "docs/plans/2026-06-14-codeql-analysis.md" \
+  "docs/plans/2026-06-15-date-target-preflight.md" \
   "docs/plans/2026-06-08-fractional-int-conversion.md" \
   "docs/plans/2026-06-08-excel-parser-maintenance-baseline.md"; do
   require_file "$path"
+done
+
+for date_target_contract in \
+  "SUPPORTED_TARGET_CELL_TYPES = (CELL_EMPTY, CELL_TEXT, CELL_INT, CELL_FLOAT)" \
+  "if cell_type not in self.SUPPORTED_TARGET_CELL_TYPES:" \
+  'raise InvalidDataException("Date target type is not supported")' \
+  "test_process_rejects_date_target_before_opening_workbook" \
+  "test_process_rejects_date_in_mixed_targets_before_opening_workbook"; do
+  if ! grep -Fq "$date_target_contract" "$ROOT_DIR/parse.py" "$ROOT_DIR/tests/test_parse.py"; then
+    printf '%s\n' "Date-target preflight contract is missing: $date_target_contract" >&2
+    exit 1
+  fi
+done
+
+for date_target_doc in AGENTS.md README.md SECURITY.md VISION.md CHANGES.md; do
+  if ! grep -Fq "Unsupported date targets are rejected before workbook access." "$ROOT_DIR/$date_target_doc"; then
+    printf '%s\n' "Date-target preflight guidance is missing from $date_target_doc" >&2
+    exit 1
+  fi
+done
+
+for date_target_plan_contract in \
+  "status: completed" \
+  "## Work Completed" \
+  "## Verification Completed" \
+  "all 38 unit and real" \
+  "Eight isolated hostile mutations were rejected" \
+  "no known vulnerabilities"; do
+  if ! grep -Fq "$date_target_plan_contract" "$DATE_TARGET_PLAN"; then
+    printf '%s\n' "Date-target preflight plan must record completed evidence: $date_target_plan_contract" >&2
+    exit 1
+  fi
 done
 
 python3 - "$ROOT_DIR/parse.py" <<'PY'

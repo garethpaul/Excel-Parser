@@ -32,6 +32,7 @@ class ExcelProcessor:
     CELL_FLOAT = 3
     CELL_DATE = 4
     VALID_CELL_TYPES = (CELL_EMPTY, CELL_TEXT, CELL_INT, CELL_FLOAT, CELL_DATE)
+    SUPPORTED_TARGET_CELL_TYPES = (CELL_EMPTY, CELL_TEXT, CELL_INT, CELL_FLOAT)
 
     def __init__(self, rowdatacallback, parsedonecallback, exceptioncallback=None):
         self.rowdatacallback = rowdatacallback
@@ -139,6 +140,8 @@ class ExcelProcessor:
                 or cell_type not in self.VALID_CELL_TYPES
             ):
                 raise InvalidDataException("Invalid target datatype:" + self.format_error_value(cell_type))
+            if cell_type not in self.SUPPORTED_TARGET_CELL_TYPES:
+                raise InvalidDataException("Date target type is not supported")
         return normalized
 
     def validate_workbook_path(self, excel):

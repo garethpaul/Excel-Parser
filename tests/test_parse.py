@@ -379,6 +379,33 @@ class ExcelProcessorTests(unittest.TestCase):
 
         self.assertEqual([], fake_xlrd.opened)
 
+    def test_process_rejects_date_target_before_opening_workbook(self):
+        processor, fake_xlrd = self.processor([])
+
+        with self.assertRaisesRegex(
+            parse.InvalidDataException,
+            "Date target type is not supported",
+        ):
+            processor.process("fixture.xls", "People", False, [parse.ExcelProcessor.CELL_DATE])
+
+        self.assertEqual([], fake_xlrd.opened)
+
+    def test_process_rejects_date_in_mixed_targets_before_opening_workbook(self):
+        processor, fake_xlrd = self.processor([])
+
+        with self.assertRaisesRegex(
+            parse.InvalidDataException,
+            "Date target type is not supported",
+        ):
+            processor.process(
+                "fixture.xls",
+                "People",
+                False,
+                [parse.ExcelProcessor.CELL_TEXT, parse.ExcelProcessor.CELL_DATE],
+            )
+
+        self.assertEqual([], fake_xlrd.opened)
+
     def test_process_accepts_exact_xls_target_column_limit(self):
         processor, fake_xlrd = self.processor([])
 
