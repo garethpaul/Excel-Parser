@@ -70,3 +70,10 @@ errors instead of one deterministic preflight failure.
   pre-open ordering, documentation, and reopened plan status.
 - Shell syntax, `git diff --check`, exact-path review, generated-artifact and
   secret-pattern audits, and staged-path review passed before delivery.
+- The implementation was committed as
+  `e2899c533ef955d349610e7ca677844c63547916`.
+- The repository's canonical pull-request workflow run `27530495018` passed on
+  that exact implementation head across Python 3.10, 3.12, and 3.14, including
+  the actions, Python, and aggregate CodeQL checks. PR #12 remained open, clean,
+  and mergeable, and the branch had no open code-scanning alerts. This workflow
+  does not define a separate push event.

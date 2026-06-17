@@ -95,6 +95,8 @@ for date_target_plan_contract in \
   "## Verification Completed" \
   "all 38 unit and real" \
   "Eight isolated hostile mutations were rejected" \
+  "e2899c533ef955d349610e7ca677844c63547916" \
+  'pull-request workflow run `27530495018`' \
   "no known vulnerabilities"; do
   if ! grep -Fq "$date_target_plan_contract" "$DATE_TARGET_PLAN"; then
     printf '%s\n' "Date-target preflight plan must record completed evidence: $date_target_plan_contract" >&2
