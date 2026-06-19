@@ -112,10 +112,17 @@ source = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")
 process = source.split("    def process(", 1)[1].split("    def validate_callbacks", 1)[0]
 release = 'release_resources()'
 completion = 'self.parsedonecallback()'
-if process.count(release) != 1 or process.count(completion) != 1:
-    raise SystemExit("Workbook release and completion calls must remain unique.")
-if process.index(release) > process.index(completion):
+if process.count(release) != 2 or process.count(completion) != 1:
+    raise SystemExit("Workbook release must cover success and failure before one completion signal.")
+if process.rindex(release) > process.index(completion):
     raise SystemExit("Workbook resources must be released before parse completion is signaled.")
+for contract in (
+    "except BaseException as processing_error:",
+    "except BaseException as release_error:",
+    "raise processing_error from release_error",
+):
+    if contract not in process:
+        raise SystemExit("Workbook cleanup must preserve the primary processing failure.")
 PY
 
 python3 - "$ROOT_DIR/parse.py" <<'PY'
@@ -321,10 +328,17 @@ if ! grep -Fq "Target cell type declarations should be validated before opening 
   exit 1
 fi
 
-if ! grep -Fq "Workbook paths should be validated as non-empty .xls paths before opening files" "$ROOT_DIR/SECURITY.md"; then
+if ! grep -Fq 'Workbook paths must resolve to regular `.xls` files no larger than 64 MiB' "$ROOT_DIR/SECURITY.md"; then
   printf '%s\n' "SECURITY must document workbook path validation before workbook access." >&2
   exit 1
 fi
+
+for bounded_input_doc in README.md SECURITY.md VISION.md AGENTS.md CHANGES.md; do
+  if ! grep -Fq "64 MiB" "$ROOT_DIR/$bounded_input_doc"; then
+    printf '%s\n' "$bounded_input_doc must document the workbook size boundary." >&2
+    exit 1
+  fi
+done
 
 if ! grep -Fq "actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10" "$CI_WORKFLOW" ||
   ! grep -Fq "actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405" "$CI_WORKFLOW" ||
@@ -407,7 +421,6 @@ if grep -Fq "except Exception," "$ROOT_DIR/parse.py" ||
   ! grep -Fq "def validate_cell_types" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "cell_types = self.validate_cell_types(cell_types)" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "def format_error_value" "$ROOT_DIR/parse.py" ||
-  ! grep -Fq "value.splitlines()" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "cell_types=None" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "newtype == ExcelProcessor.CELL_EMPTY" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "def convert_number_to_int" "$ROOT_DIR/parse.py" ||
@@ -427,6 +440,31 @@ if grep -Fq "except Exception," "$ROOT_DIR/parse.py" ||
   printf '%s\n' "Parser must stay importable under Python 3 while preserving the legacy callback API." >&2
   exit 1
 fi
+
+if grep -Fq "value.splitlines()" "$ROOT_DIR/parse.py"; then
+  printf '%s\n' "Parser error summaries must remain bounded without copying full multiline values." >&2
+  exit 1
+fi
+
+for hostile_boundary_contract in \
+  "MAX_WORKBOOK_BYTES = 64 * 1024 * 1024" \
+  "MAX_TEXT_LENGTH = 32767" \
+  "MAX_XLS_ROWS = 65536" \
+  "test_process_reports_cell_value_index_error_instead_of_emitting_missing_value" \
+  "test_process_preserves_row_error_when_resource_release_also_fails" \
+  "test_process_rejects_non_regular_workbook_before_opening" \
+  "test_process_rejects_oversized_workbook_before_opening" \
+  "test_process_rejects_invalid_sheet_row_count_and_releases_workbook" \
+  "test_clean_text_rejects_values_above_xls_string_limit" \
+  "test_convert_type_rejects_boolean_source_type_aliases" \
+  "test_numeric_source_rejects_non_numeric_and_boolean_values" \
+  "test_error_summary_does_not_copy_entire_multiline_value" \
+  "test_process_rejects_formula_without_cached_number_and_date_cells"; do
+  if ! grep -Fq "$hostile_boundary_contract" "$ROOT_DIR/parse.py" "$ROOT_DIR/tests/test_parse.py" "$ROOT_DIR/tests/test_xls_integration.py"; then
+    printf '%s\n' "Hostile workbook boundary contract is missing: $hostile_boundary_contract" >&2
+    exit 1
+  fi
+done
 
 for obsolete_python_contract in \
   "basestring" \

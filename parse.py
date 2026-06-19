@@ -1,4 +1,6 @@
 import math
+import os
+import stat
 from itertools import islice
 
 
@@ -19,6 +21,9 @@ except ImportError:
 
 MAX_ERROR_VALUE_LENGTH = 80
 MAX_TARGET_COLUMNS = 256
+MAX_TEXT_LENGTH = 32767
+MAX_XLS_ROWS = 65536
+MAX_WORKBOOK_BYTES = 64 * 1024 * 1024
 
 
 class InvalidDataException(Exception):
@@ -52,20 +57,22 @@ class ExcelProcessor:
             raise InvalidDataException("Opened workbook must provide callable release_resources")
         try:
             sheet = book.sheet_by_name(sheet_name)
+            row_count = self.validate_row_count(sheet.nrows)
             rowno = 1 if has_header else 0
 
-            for rowid in range(rowno, sheet.nrows):
+            for rowid in range(rowno, row_count):
                 try:
                     cellvalues = []
                     for cellid in range(len(cell_types)):
                         try:
                             ct = sheet.cell_type(rowid, cellid)
-                            if ct != xlrd.XL_CELL_EMPTY:
-                                value = self.convert_type(ct, cell_types[cellid], sheet.cell_value(rowid, cellid))
-                                cellvalues.append(value)
-                            else:
-                                cellvalues.append(None)
                         except IndexError:
+                            cellvalues.append(None)
+                            continue
+                        if ct != xlrd.XL_CELL_EMPTY:
+                            value = self.convert_type(ct, cell_types[cellid], sheet.cell_value(rowid, cellid))
+                            cellvalues.append(value)
+                        else:
                             cellvalues.append(None)
                     self.rowdatacallback(rowid, cellvalues)
                 except Exception as exc:
@@ -73,8 +80,13 @@ class ExcelProcessor:
                         self.exceptioncallback(rowid, exc)
                     else:
                         raise
-
-        finally:
+        except BaseException as processing_error:
+            try:
+                release_resources()
+            except BaseException as release_error:
+                raise processing_error from release_error
+            raise
+        else:
             release_resources()
         self.parsedonecallback()
 
@@ -90,6 +102,9 @@ class ExcelProcessor:
         if newtype == ExcelProcessor.CELL_EMPTY:
             return None
 
+        if not isinstance(curtype, int) or isinstance(curtype, bool):
+            raise InvalidDataException("Invalid source datatype : " + self.format_error_value(curtype))
+
         if curtype == xlrd.XL_CELL_TEXT:
             if newtype == ExcelProcessor.CELL_TEXT:
                 return self.clean_text(data)
@@ -103,6 +118,10 @@ class ExcelProcessor:
                 raise InvalidDataException("Invalid target datatype:" + str(newtype))
 
         elif curtype == xlrd.XL_CELL_NUMBER:
+            if not isinstance(data, (int, float)) or isinstance(data, bool):
+                raise InvalidDataException(
+                    "Numeric cell value must be numeric: " + self.format_error_value(data)
+                )
             if newtype == ExcelProcessor.CELL_TEXT:
                 self.convert_number_to_float(data)
                 return str(data)
@@ -149,7 +168,25 @@ class ExcelProcessor:
             raise InvalidDataException("Workbook path must be a non-empty .xls path")
         if not excel.lower().endswith(".xls"):
             raise InvalidDataException("Workbook path must end with .xls")
+        try:
+            workbook_stat = os.stat(excel)
+        except OSError:
+            raise InvalidDataException("Workbook path must reference an accessible regular file")
+        if not stat.S_ISREG(workbook_stat.st_mode):
+            raise InvalidDataException("Workbook path must reference a regular file")
+        if workbook_stat.st_size < 0 or workbook_stat.st_size > MAX_WORKBOOK_BYTES:
+            raise InvalidDataException("Workbook file cannot exceed " + str(MAX_WORKBOOK_BYTES) + " bytes")
         return excel
+
+    def validate_row_count(self, row_count):
+        if (
+            not isinstance(row_count, int)
+            or isinstance(row_count, bool)
+            or row_count < 0
+            or row_count > MAX_XLS_ROWS
+        ):
+            raise InvalidDataException("Sheet row count must be between 0 and " + str(MAX_XLS_ROWS))
+        return row_count
 
     def validate_sheet_name(self, sheet_name):
         if not isinstance(sheet_name, str) or not sheet_name.strip():
@@ -180,6 +217,8 @@ class ExcelProcessor:
     def clean_text(self, data):
         if not isinstance(data, str):
             raise InvalidDataException("Text cell value must be text: " + self.format_error_value(data))
+        if len(data) > MAX_TEXT_LENGTH:
+            raise InvalidDataException("Text cell value exceeds " + str(MAX_TEXT_LENGTH) + " characters")
         return data.strip()
 
     def convert_text_to_int(self, data):
@@ -206,13 +245,22 @@ class ExcelProcessor:
         except Exception:
             return "<unprintable>"
 
-        value = " ".join(value.splitlines())
         summary = []
         summary_length = 0
-        for character in value:
-            token = character if character.isprintable() else repr(character)[1:-1]
+        index = 0
+        while index < len(value):
+            character = value[index]
+            if character == "\r":
+                token = " "
+                if index + 1 < len(value) and value[index + 1] == "\n":
+                    index += 1
+            elif character == "\n":
+                token = " "
+            else:
+                token = character if character.isprintable() else repr(character)[1:-1]
             if summary_length + len(token) > MAX_ERROR_VALUE_LENGTH:
                 return "".join(summary) + "..."
             summary.append(token)
             summary_length += len(token)
+            index += 1
         return "".join(summary)

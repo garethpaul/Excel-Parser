@@ -47,7 +47,11 @@ Current baseline:
 - Target schemas are limited to 256 target columns and normalized with bounded
   input consumption before workbook files are opened.
 - Workbook paths are validated before workbook files are opened and remain scoped
-  to non-empty `.xls` paths.
+  to regular `.xls` files no larger than 64 MiB.
+- Sheet rows and text cells remain bounded by the legacy `.xls` limits, and
+  malformed cell reads cannot be downgraded to missing values.
+- Formula cells rely on stored cached results; the parser does not evaluate
+  formulas.
 - Cell type constants, sheet names, and header flags are strictly typed before
   workbook files are opened.
 - Callback configuration fails fast before workbook files are opened.

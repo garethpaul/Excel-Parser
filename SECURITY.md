@@ -47,9 +47,12 @@ Unsupported date targets are rejected before workbook access.
 Target schemas are limited to 256 target columns, and iterable declarations
 must be bounded before workbook files are opened.
 
-Workbook paths should be validated as non-empty .xls paths before opening files
-so unsupported or malformed workbook inputs fail before parser file resources are
-touched.
+Workbook paths must resolve to regular `.xls` files no larger than 64 MiB before
+opening so unsupported, special-device, or oversized inputs fail before parser
+resources are touched. Sheets above 65,536 rows and text cells above 32,767
+characters are rejected before callback delivery. Formula evaluation is not
+performed; only cached workbook results are read, and incompatible cached values
+fail through the row exception path.
 
 An opened workbook with a missing or non-callable release hook must fail before
 sheet access or callbacks so completion never claims unperformed cleanup.

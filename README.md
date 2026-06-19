@@ -71,7 +71,8 @@ this baseline.
   numerically equal floats are rejected instead of being treated as schema
   aliases.
 - Workbook paths are validated as non-empty .xls paths before opening files,
-  matching the documented `xlrd` 2.x `.xls` boundary.
+  matching the documented `xlrd` 2.x `.xls` boundary. Paths must resolve to
+  regular files no larger than 64 MiB.
 - Sheet names must be non-empty strings and `has_header` must be a real boolean;
   invalid processing options fail before workbook files are opened.
 - Numeric cells convert to `CELL_INT` only when the value is integer-valued;
@@ -84,6 +85,11 @@ this baseline.
   reach callbacks, including when numeric cells are requested as text.
 - Conversion errors summarize long, multiline, or unprintable values and escape
   terminal or log control characters before raising `InvalidDataException`.
+- Sheets are limited to the `.xls` maximum of 65,536 rows, and text values are
+  limited to 32,767 characters before callbacks receive them.
+- Formula cells use the cached result stored in the workbook; this parser does
+  not calculate formulas. Missing or incompatible cached results fail through
+  the row exception path rather than being silently treated as missing cells.
 - Date conversion is intentionally unsupported and raises
   `InvalidDataException`.
 - Unsupported date targets are rejected before workbook access.

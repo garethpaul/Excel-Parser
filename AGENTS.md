@@ -46,9 +46,11 @@
 - No required secret or credential file was identified in the repository scan. If you add integrations later, keep secrets out of git.
 - Use synthetic spreadsheets or fake workbook objects in tests. Do not commit private spreadsheet data.
 - Parser errors should avoid dumping full row contents unless a caller explicitly asks for that behavior.
-- Real workbook paths must be non-empty `.xls` paths; `.xlsx` support is not part of the current `xlrd` 2.x contract.
+- Real workbook paths must be regular `.xls` files no larger than 64 MiB; `.xlsx` support is not part of the current `xlrd` 2.x contract.
 - Validate the sheet name, boolean header flag, and exact integer target-type constants before opening a workbook. Do not accept booleans or numerically equivalent floats as schema aliases.
 - Limit target schemas to 256 target columns and keep iterable normalization bounded before workbook access.
+- Reject sheets above 65,536 rows and text cells above 32,767 characters; do not silently convert inconsistent cell reads into missing values.
+- Treat formula values as cached workbook results only; this parser does not calculate formulas.
 - Preserve strict conversion behavior: reject fractional integer conversions, blank or malformed numeric text, non-string text cells, non-finite numbers, unsupported dates, and unprintable, control-character-bearing, or oversized raw values in errors.
 - Unsupported date targets are rejected before workbook access.
 - Keep `xlrd` and `pip-audit` pinned through reviewed dependency changes that pass the full Python matrix.

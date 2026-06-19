@@ -1,5 +1,15 @@
 # Changes
 
+## 2026-06-19
+
+- Required regular `.xls` files no larger than 64 MiB and bounded sheets and
+  text cells to the legacy format's 65,536-row and 32,767-character limits.
+- Stopped treating inconsistent `cell_value` failures as missing cells and
+  rejected boolean aliases for source cell types.
+- Preserved primary processing exceptions when workbook cleanup also fails and
+  bounded multiline error summaries without copying full values.
+- Added real-workbook coverage for formula cached-result and date rejection.
+
 ## 2026-06-15
 
 - Unsupported date targets are rejected before workbook access.

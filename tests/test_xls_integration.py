@@ -1,3 +1,4 @@
+import datetime
 import os
 import tempfile
 import unittest
@@ -51,6 +52,40 @@ class RealXlsIntegrationTests(unittest.TestCase):
             ],
             events,
         )
+
+    def test_process_rejects_formula_without_cached_number_and_date_cells(self):
+        events = []
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            workbook_path = os.path.join(temporary_directory, "hostile.xls")
+            workbook = xlwt.Workbook()
+            sheet = workbook.add_sheet("Values")
+            sheet.write(0, 0, xlwt.Formula("1+1"))
+            date_style = xlwt.easyxf(num_format_str="YYYY-MM-DD")
+            sheet.write(1, 0, datetime.datetime(2026, 1, 2), date_style)
+            workbook.save(workbook_path)
+
+            processor = parse.ExcelProcessor(
+                lambda rowid, values: events.append(("row", rowid, values)),
+                lambda: events.append(("done",)),
+                lambda rowid, exc: events.append(("error", rowid, type(exc), str(exc))),
+            )
+            processor.process(
+                workbook_path,
+                "Values",
+                False,
+                [parse.ExcelProcessor.CELL_FLOAT],
+            )
+
+        self.assertEqual("error", events[0][0])
+        self.assertEqual(0, events[0][1])
+        self.assertIs(parse.InvalidDataException, events[0][2])
+        self.assertIn("Empty text value", events[0][3])
+        self.assertEqual("error", events[1][0])
+        self.assertEqual(1, events[1][1])
+        self.assertIs(parse.InvalidDataException, events[1][2])
+        self.assertIn("Conversion from Date Type not supported", events[1][3])
+        self.assertEqual(("done",), events[2])
 
 
 if __name__ == "__main__":
