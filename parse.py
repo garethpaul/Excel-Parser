@@ -1,7 +1,10 @@
 import math
+import os
+import stat
+from itertools import islice
 
 
-class _MissingXlrd(object):
+class _MissingXlrd:
     XL_CELL_EMPTY = 0
     XL_CELL_TEXT = 1
     XL_CELL_NUMBER = 2
@@ -16,30 +19,25 @@ try:
 except ImportError:
     xlrd = _MissingXlrd()
 
-try:
-    string_types = (basestring,)
-except NameError:
-    string_types = (str,)
-
-try:
-    integer_types = (int, long)
-except NameError:
-    integer_types = (int,)
-
 MAX_ERROR_VALUE_LENGTH = 80
+MAX_TARGET_COLUMNS = 256
+MAX_TEXT_LENGTH = 32767
+MAX_XLS_ROWS = 65536
+MAX_WORKBOOK_BYTES = 64 * 1024 * 1024
 
 
 class InvalidDataException(Exception):
     pass
 
 
-class ExcelProcessor(object):
+class ExcelProcessor:
     CELL_EMPTY = 0
     CELL_TEXT = 1
     CELL_INT = 2
     CELL_FLOAT = 3
     CELL_DATE = 4
     VALID_CELL_TYPES = (CELL_EMPTY, CELL_TEXT, CELL_INT, CELL_FLOAT, CELL_DATE)
+    SUPPORTED_TARGET_CELL_TYPES = (CELL_EMPTY, CELL_TEXT, CELL_INT, CELL_FLOAT)
 
     def __init__(self, rowdatacallback, parsedonecallback, exceptioncallback=None):
         self.rowdatacallback = rowdatacallback
@@ -47,28 +45,34 @@ class ExcelProcessor(object):
         self.exceptioncallback = exceptioncallback
 
     def process(self, excel, sheet_name, has_header, cell_types=None):
+        self.validate_callbacks()
         cell_types = self.validate_cell_types(cell_types)
         excel = self.validate_workbook_path(excel)
         sheet_name = self.validate_sheet_name(sheet_name)
         has_header = self.validate_has_header(has_header)
 
         book = xlrd.open_workbook(excel, on_demand=True)
+        release_resources = getattr(book, "release_resources", None)
+        if not callable(release_resources):
+            raise InvalidDataException("Opened workbook must provide callable release_resources")
         try:
             sheet = book.sheet_by_name(sheet_name)
+            row_count = self.validate_row_count(sheet.nrows)
             rowno = 1 if has_header else 0
 
-            for rowid in range(rowno, sheet.nrows):
+            for rowid in range(rowno, row_count):
                 try:
                     cellvalues = []
                     for cellid in range(len(cell_types)):
                         try:
                             ct = sheet.cell_type(rowid, cellid)
-                            if ct != xlrd.XL_CELL_EMPTY:
-                                value = self.convert_type(ct, cell_types[cellid], sheet.cell_value(rowid, cellid))
-                                cellvalues.append(value)
-                            else:
-                                cellvalues.append(None)
                         except IndexError:
+                            cellvalues.append(None)
+                            continue
+                        if ct != xlrd.XL_CELL_EMPTY:
+                            value = self.convert_type(ct, cell_types[cellid], sheet.cell_value(rowid, cellid))
+                            cellvalues.append(value)
+                        else:
                             cellvalues.append(None)
                     self.rowdatacallback(rowid, cellvalues)
                 except Exception as exc:
@@ -76,16 +80,30 @@ class ExcelProcessor(object):
                         self.exceptioncallback(rowid, exc)
                     else:
                         raise
-
-            self.parsedonecallback()
-        finally:
-            release_resources = getattr(book, "release_resources", None)
-            if release_resources is not None:
+        except BaseException as processing_error:
+            try:
                 release_resources()
+            except BaseException as release_error:
+                raise processing_error from release_error
+            raise
+        else:
+            release_resources()
+        self.parsedonecallback()
+
+    def validate_callbacks(self):
+        if not callable(self.rowdatacallback):
+            raise InvalidDataException("Row data callback must be callable")
+        if not callable(self.parsedonecallback):
+            raise InvalidDataException("Parse completion callback must be callable")
+        if self.exceptioncallback is not None and not callable(self.exceptioncallback):
+            raise InvalidDataException("Exception callback must be callable or None")
 
     def convert_type(self, curtype, newtype, data):
         if newtype == ExcelProcessor.CELL_EMPTY:
             return None
+
+        if not isinstance(curtype, int) or isinstance(curtype, bool):
+            raise InvalidDataException("Invalid source datatype : " + self.format_error_value(curtype))
 
         if curtype == xlrd.XL_CELL_TEXT:
             if newtype == ExcelProcessor.CELL_TEXT:
@@ -100,6 +118,10 @@ class ExcelProcessor(object):
                 raise InvalidDataException("Invalid target datatype:" + str(newtype))
 
         elif curtype == xlrd.XL_CELL_NUMBER:
+            if not isinstance(data, (int, float)) or isinstance(data, bool):
+                raise InvalidDataException(
+                    "Numeric cell value must be numeric: " + self.format_error_value(data)
+                )
             if newtype == ExcelProcessor.CELL_TEXT:
                 self.convert_number_to_float(data)
                 return str(data)
@@ -121,28 +143,53 @@ class ExcelProcessor(object):
             return []
 
         try:
-            normalized = list(cell_types)
+            normalized = list(islice(iter(cell_types), MAX_TARGET_COLUMNS + 1))
         except TypeError:
             raise InvalidDataException("Target cell types must be iterable")
 
+        if len(normalized) > MAX_TARGET_COLUMNS:
+            raise InvalidDataException(
+                "Target cell types cannot exceed " + str(MAX_TARGET_COLUMNS) + " columns"
+            )
+
         for cell_type in normalized:
             if (
-                not isinstance(cell_type, integer_types)
+                not isinstance(cell_type, int)
                 or isinstance(cell_type, bool)
                 or cell_type not in self.VALID_CELL_TYPES
             ):
                 raise InvalidDataException("Invalid target datatype:" + self.format_error_value(cell_type))
+            if cell_type not in self.SUPPORTED_TARGET_CELL_TYPES:
+                raise InvalidDataException("Date target type is not supported")
         return normalized
 
     def validate_workbook_path(self, excel):
-        if not isinstance(excel, string_types) or not excel.strip():
+        if not isinstance(excel, str) or not excel.strip():
             raise InvalidDataException("Workbook path must be a non-empty .xls path")
         if not excel.lower().endswith(".xls"):
             raise InvalidDataException("Workbook path must end with .xls")
+        try:
+            workbook_stat = os.stat(excel)
+        except OSError:
+            raise InvalidDataException("Workbook path must reference an accessible regular file")
+        if not stat.S_ISREG(workbook_stat.st_mode):
+            raise InvalidDataException("Workbook path must reference a regular file")
+        if workbook_stat.st_size < 0 or workbook_stat.st_size > MAX_WORKBOOK_BYTES:
+            raise InvalidDataException("Workbook file cannot exceed " + str(MAX_WORKBOOK_BYTES) + " bytes")
         return excel
 
+    def validate_row_count(self, row_count):
+        if (
+            not isinstance(row_count, int)
+            or isinstance(row_count, bool)
+            or row_count < 0
+            or row_count > MAX_XLS_ROWS
+        ):
+            raise InvalidDataException("Sheet row count must be between 0 and " + str(MAX_XLS_ROWS))
+        return row_count
+
     def validate_sheet_name(self, sheet_name):
-        if not isinstance(sheet_name, string_types) or not sheet_name.strip():
+        if not isinstance(sheet_name, str) or not sheet_name.strip():
             raise InvalidDataException("Sheet name must be a non-empty string")
         return sheet_name
 
@@ -168,8 +215,10 @@ class ExcelProcessor(object):
         return number
 
     def clean_text(self, data):
-        if not isinstance(data, string_types):
+        if not isinstance(data, str):
             raise InvalidDataException("Text cell value must be text: " + self.format_error_value(data))
+        if len(data) > MAX_TEXT_LENGTH:
+            raise InvalidDataException("Text cell value exceeds " + str(MAX_TEXT_LENGTH) + " characters")
         return data.strip()
 
     def convert_text_to_int(self, data):
@@ -192,11 +241,26 @@ class ExcelProcessor(object):
 
     def format_error_value(self, data):
         try:
-            value = data if isinstance(data, string_types) else str(data)
+            value = data if isinstance(data, str) else str(data)
         except Exception:
             return "<unprintable>"
 
-        value = " ".join(value.splitlines())
-        if len(value) > MAX_ERROR_VALUE_LENGTH:
-            return value[:MAX_ERROR_VALUE_LENGTH] + "..."
-        return value
+        summary = []
+        summary_length = 0
+        index = 0
+        while index < len(value):
+            character = value[index]
+            if character == "\r":
+                token = " "
+                if index + 1 < len(value) and value[index + 1] == "\n":
+                    index += 1
+            elif character == "\n":
+                token = " "
+            else:
+                token = character if character.isprintable() else repr(character)[1:-1]
+            if summary_length + len(token) > MAX_ERROR_VALUE_LENGTH:
+                return "".join(summary) + "..."
+            summary.append(token)
+            summary_length += len(token)
+            index += 1
+        return "".join(summary)

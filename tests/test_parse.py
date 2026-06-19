@@ -1,9 +1,14 @@
+import inspect
+import os
+import stat
 import unittest
+from types import SimpleNamespace
+from unittest import mock
 
 import parse
 
 
-class FakeSheet(object):
+class FakeSheet:
     def __init__(self, rows):
         self.rows = rows
         self.nrows = len(rows)
@@ -15,7 +20,7 @@ class FakeSheet(object):
         return self.rows[rowid][cellid][1]
 
 
-class FakeBook(object):
+class FakeBook:
     def __init__(self, sheets):
         self.sheets = sheets
         self.released = False
@@ -27,7 +32,13 @@ class FakeBook(object):
         self.released = True
 
 
-class FakeXlrd(object):
+class FakeBookWithReleaseError(FakeBook):
+    def release_resources(self):
+        self.released = True
+        raise RuntimeError("release failed")
+
+
+class FakeXlrd:
     XL_CELL_EMPTY = 0
     XL_CELL_TEXT = 1
     XL_CELL_NUMBER = 2
@@ -43,17 +54,51 @@ class FakeXlrd(object):
         return book
 
 
-class UnprintableValue(object):
+class FakeBookWithoutRelease:
+    def __init__(self):
+        self.sheet_requested = False
+
+    def sheet_by_name(self, _sheet_name):
+        self.sheet_requested = True
+        raise AssertionError("sheet lookup must not occur")
+
+
+class FakeXlrdWithBook(FakeXlrd):
+    def __init__(self, book):
+        self.book = book
+        self.opened = []
+
+    def open_workbook(self, excel, on_demand=False):
+        self.opened.append((excel, on_demand, self.book))
+        return self.book
+
+
+class UnprintableValue:
     def __str__(self):
         raise RuntimeError("cannot stringify value")
+
+
+class SplitlinesBomb(str):
+    def splitlines(self, *args, **kwargs):
+        raise AssertionError("error summaries must not copy the entire source value")
 
 
 class ExcelProcessorTests(unittest.TestCase):
     def setUp(self):
         self.original_xlrd = parse.xlrd
+        self.original_stat = os.stat
+        self.fake_stat = SimpleNamespace(st_mode=stat.S_IFREG, st_size=1)
+        self.stat_patcher = mock.patch("os.stat", side_effect=self.stat_fixture)
+        self.stat_patcher.start()
 
     def tearDown(self):
+        self.stat_patcher.stop()
         parse.xlrd = self.original_xlrd
+
+    def stat_fixture(self, path, *args, **kwargs):
+        if path == "fixture.xls":
+            return self.fake_stat
+        return self.original_stat(path, *args, **kwargs)
 
     def processor(self, rows, row_callback=None, done_callback=None, exception_callback=None):
         fake_xlrd = FakeXlrd({"People": FakeSheet(rows)})
@@ -61,6 +106,21 @@ class ExcelProcessorTests(unittest.TestCase):
         row_callback = row_callback or (lambda _rowid, _values: None)
         done_callback = done_callback or (lambda: None)
         return parse.ExcelProcessor(row_callback, done_callback, exception_callback), fake_xlrd
+
+    def test_public_callback_api_signatures_are_preserved(self):
+        constructor = inspect.signature(parse.ExcelProcessor.__init__)
+        process = inspect.signature(parse.ExcelProcessor.process)
+
+        self.assertEqual(
+            ["self", "rowdatacallback", "parsedonecallback", "exceptioncallback"],
+            list(constructor.parameters),
+        )
+        self.assertEqual(
+            ["self", "excel", "sheet_name", "has_header", "cell_types"],
+            list(process.parameters),
+        )
+        self.assertIsNone(constructor.parameters["exceptioncallback"].default)
+        self.assertIsNone(process.parameters["cell_types"].default)
 
     def test_convert_type_handles_text_and_number_targets(self):
         processor, _fake_xlrd = self.processor([])
@@ -79,6 +139,30 @@ class ExcelProcessorTests(unittest.TestCase):
 
         with self.assertRaises(parse.InvalidDataException):
             processor.convert_type(FakeXlrd.XL_CELL_NUMBER, parse.ExcelProcessor.CELL_INT, 3.9)
+
+    def test_convert_type_rejects_boolean_source_type_aliases(self):
+        processor, _fake_xlrd = self.processor([])
+
+        with self.assertRaisesRegex(parse.InvalidDataException, "Invalid source datatype"):
+            processor.convert_type(True, parse.ExcelProcessor.CELL_TEXT, "value")
+
+    def test_numeric_source_rejects_non_numeric_and_boolean_values(self):
+        processor, _fake_xlrd = self.processor([])
+
+        for value in ("12", True):
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(parse.InvalidDataException, "Numeric cell value must be numeric"):
+                    processor.convert_type(
+                        FakeXlrd.XL_CELL_NUMBER,
+                        parse.ExcelProcessor.CELL_FLOAT,
+                        value,
+                    )
+
+    def test_clean_text_rejects_values_above_xls_string_limit(self):
+        processor, _fake_xlrd = self.processor([])
+
+        with self.assertRaisesRegex(parse.InvalidDataException, "Text cell value exceeds 32767 characters"):
+            processor.clean_text("x" * (parse.MAX_TEXT_LENGTH + 1))
 
     def test_text_to_number_rejects_blank_values_with_parser_exception(self):
         processor, _fake_xlrd = self.processor([])
@@ -119,6 +203,40 @@ class ExcelProcessorTests(unittest.TestCase):
         self.assertIn("bad next", message)
         self.assertNotIn("\r", message)
         self.assertNotIn("\n", message)
+
+    def test_error_summary_does_not_copy_entire_multiline_value(self):
+        processor, _fake_xlrd = self.processor([])
+
+        self.assertEqual("first second", processor.format_error_value(SplitlinesBomb("first\nsecond")))
+
+    def test_conversion_errors_escape_control_characters(self):
+        processor, _fake_xlrd = self.processor([])
+
+        with self.assertRaises(parse.InvalidDataException) as context:
+            processor.convert_type(
+                FakeXlrd.XL_CELL_TEXT,
+                parse.ExcelProcessor.CELL_INT,
+                "bad\x1b[31m\tvalue\x00",
+            )
+
+        message = str(context.exception)
+        self.assertIn(r"bad\x1b[31m\tvalue\x00", message)
+        self.assertNotIn("\x1b", message)
+        self.assertNotIn("\t", message)
+        self.assertNotIn("\x00", message)
+
+    def test_conversion_error_summary_preserves_printable_unicode(self):
+        processor, _fake_xlrd = self.processor([])
+
+        self.assertEqual("caf\u00e9", processor.format_error_value("caf\u00e9"))
+
+    def test_conversion_error_summary_bounds_complete_escape_tokens(self):
+        processor, _fake_xlrd = self.processor([])
+
+        summary = processor.format_error_value("\x00" * 21)
+
+        self.assertEqual((r"\x00" * 20) + "...", summary)
+        self.assertEqual(parse.MAX_ERROR_VALUE_LENGTH + 3, len(summary))
 
     def test_conversion_errors_handle_unprintable_values(self):
         processor, _fake_xlrd = self.processor([])
@@ -199,6 +317,133 @@ class ExcelProcessorTests(unittest.TestCase):
         ], received)
         self.assertEqual([True], done)
 
+    def test_process_releases_workbook_before_completion_callback(self):
+        completion_states = []
+        fake_xlrd = None
+
+        def done_callback():
+            book = fake_xlrd.opened[0][2]
+            completion_states.append(book.released)
+
+        processor, fake_xlrd = self.processor([], done_callback=done_callback)
+
+        processor.process("fixture.xls", "People", False, [])
+
+        self.assertEqual([True], completion_states)
+
+    def test_process_releases_workbook_before_raising_completion_callback(self):
+        fake_xlrd = None
+
+        def done_callback():
+            self.assertTrue(fake_xlrd.opened[0][2].released)
+            raise RuntimeError("completion failed")
+
+        processor, fake_xlrd = self.processor([], done_callback=done_callback)
+
+        with self.assertRaisesRegex(RuntimeError, "completion failed"):
+            processor.process("fixture.xls", "People", False, [])
+
+        self.assertTrue(fake_xlrd.opened[0][2].released)
+
+    def test_process_preserves_row_error_when_resource_release_also_fails(self):
+        class FailingSheet:
+            nrows = 1
+
+            def cell_type(self, _rowid, _cellid):
+                raise ValueError("row failed")
+
+        book = FakeBookWithReleaseError({"People": FailingSheet()})
+        parse.xlrd = FakeXlrdWithBook(book)
+        processor = parse.ExcelProcessor(lambda _rowid, _values: None, lambda: None)
+
+        with self.assertRaisesRegex(ValueError, "row failed") as context:
+            processor.process("fixture.xls", "People", False, [parse.ExcelProcessor.CELL_TEXT])
+
+        self.assertTrue(book.released)
+        self.assertIsInstance(context.exception.__cause__, RuntimeError)
+
+    def test_process_reports_cell_value_index_error_instead_of_emitting_missing_value(self):
+        class InconsistentSheet:
+            nrows = 1
+
+            def cell_type(self, _rowid, _cellid):
+                return FakeXlrd.XL_CELL_NUMBER
+
+            def cell_value(self, _rowid, _cellid):
+                raise IndexError("cell value unavailable")
+
+        errors = []
+        rows = []
+        processor, fake_xlrd = self.processor(
+            [],
+            lambda rowid, values: rows.append((rowid, values)),
+            exception_callback=lambda rowid, exc: errors.append((rowid, exc)),
+        )
+        fake_xlrd.sheets["People"] = InconsistentSheet()
+
+        processor.process("fixture.xls", "People", False, [parse.ExcelProcessor.CELL_FLOAT])
+
+        self.assertEqual([], rows)
+        self.assertEqual(1, len(errors))
+        self.assertEqual(0, errors[0][0])
+        self.assertIsInstance(errors[0][1], IndexError)
+
+    def test_process_rejects_invalid_sheet_row_count_and_releases_workbook(self):
+        class InvalidRowCountSheet:
+            nrows = parse.MAX_XLS_ROWS + 1
+
+        book = FakeBook({"People": InvalidRowCountSheet()})
+        parse.xlrd = FakeXlrdWithBook(book)
+        processor = parse.ExcelProcessor(lambda _rowid, _values: None, lambda: None)
+
+        with self.assertRaisesRegex(parse.InvalidDataException, "Sheet row count must be between 0 and 65536"):
+            processor.process("fixture.xls", "People", False, [])
+
+        self.assertTrue(book.released)
+
+    def test_process_rejects_missing_release_hook_before_sheet_access(self):
+        book = FakeBookWithoutRelease()
+        fake_xlrd = FakeXlrdWithBook(book)
+        parse.xlrd = fake_xlrd
+        rows = []
+        completions = []
+        processor = parse.ExcelProcessor(
+            lambda rowid, values: rows.append((rowid, values)),
+            lambda: completions.append(True),
+        )
+
+        with self.assertRaisesRegex(
+            parse.InvalidDataException,
+            "Opened workbook must provide callable release_resources",
+        ):
+            processor.process("fixture.xls", "People", False, [])
+
+        self.assertFalse(book.sheet_requested)
+        self.assertEqual([], rows)
+        self.assertEqual([], completions)
+
+    def test_process_rejects_non_callable_release_hook_before_sheet_access(self):
+        book = FakeBookWithoutRelease()
+        book.release_resources = "not-callable"
+        fake_xlrd = FakeXlrdWithBook(book)
+        parse.xlrd = fake_xlrd
+        rows = []
+        completions = []
+        processor = parse.ExcelProcessor(
+            lambda rowid, values: rows.append((rowid, values)),
+            lambda: completions.append(True),
+        )
+
+        with self.assertRaisesRegex(
+            parse.InvalidDataException,
+            "Opened workbook must provide callable release_resources",
+        ):
+            processor.process("fixture.xls", "People", False, [])
+
+        self.assertFalse(book.sheet_requested)
+        self.assertEqual([], rows)
+        self.assertEqual([], completions)
+
     def test_process_allows_cell_empty_targets_to_skip_present_values(self):
         rows = [
             [(FakeXlrd.XL_CELL_TEXT, "skip"), (FakeXlrd.XL_CELL_TEXT, " Keep ")],
@@ -244,11 +489,106 @@ class ExcelProcessorTests(unittest.TestCase):
 
         self.assertEqual([], fake_xlrd.opened)
 
+    def test_process_rejects_date_target_before_opening_workbook(self):
+        processor, fake_xlrd = self.processor([])
+
+        with self.assertRaisesRegex(
+            parse.InvalidDataException,
+            "Date target type is not supported",
+        ):
+            processor.process("fixture.xls", "People", False, [parse.ExcelProcessor.CELL_DATE])
+
+        self.assertEqual([], fake_xlrd.opened)
+
+    def test_process_rejects_date_in_mixed_targets_before_opening_workbook(self):
+        processor, fake_xlrd = self.processor([])
+
+        with self.assertRaisesRegex(
+            parse.InvalidDataException,
+            "Date target type is not supported",
+        ):
+            processor.process(
+                "fixture.xls",
+                "People",
+                False,
+                [parse.ExcelProcessor.CELL_TEXT, parse.ExcelProcessor.CELL_DATE],
+            )
+
+        self.assertEqual([], fake_xlrd.opened)
+
+    def test_process_accepts_exact_xls_target_column_limit(self):
+        processor, fake_xlrd = self.processor([])
+
+        processor.process(
+            "fixture.xls",
+            "People",
+            False,
+            [parse.ExcelProcessor.CELL_EMPTY] * parse.MAX_TARGET_COLUMNS,
+        )
+
+        self.assertEqual(1, len(fake_xlrd.opened))
+        self.assertEqual(("fixture.xls", True), fake_xlrd.opened[0][:2])
+
+    def test_process_rejects_target_columns_above_xls_limit_before_opening_workbook(self):
+        processor, fake_xlrd = self.processor([])
+
+        with self.assertRaisesRegex(
+            parse.InvalidDataException,
+            "Target cell types cannot exceed 256 columns",
+        ):
+            processor.process(
+                "fixture.xls",
+                "People",
+                False,
+                [parse.ExcelProcessor.CELL_EMPTY] * (parse.MAX_TARGET_COLUMNS + 1),
+            )
+
+        self.assertEqual([], fake_xlrd.opened)
+
+    def test_process_bounds_unbounded_target_type_iterables_before_workbook_access(self):
+        processor, fake_xlrd = self.processor([])
+        consumed = []
+
+        def unbounded_cell_types():
+            while True:
+                consumed.append(True)
+                yield parse.ExcelProcessor.CELL_EMPTY
+
+        with self.assertRaisesRegex(
+            parse.InvalidDataException,
+            "Target cell types cannot exceed 256 columns",
+        ):
+            processor.process("fixture.xls", "People", False, unbounded_cell_types())
+
+        self.assertEqual(parse.MAX_TARGET_COLUMNS + 1, len(consumed))
+        self.assertEqual([], fake_xlrd.opened)
+
     def test_process_rejects_non_xls_workbook_path_before_opening_workbook(self):
         processor, fake_xlrd = self.processor([])
 
         with self.assertRaises(parse.InvalidDataException):
             processor.process("fixture.xlsx", "People", False, [parse.ExcelProcessor.CELL_TEXT])
+
+        self.assertEqual([], fake_xlrd.opened)
+
+    def test_process_rejects_non_regular_workbook_before_opening(self):
+        processor, fake_xlrd = self.processor([])
+        self.fake_stat = SimpleNamespace(st_mode=stat.S_IFIFO, st_size=1)
+
+        with self.assertRaisesRegex(parse.InvalidDataException, "Workbook path must reference a regular file"):
+            processor.process("fixture.xls", "People", False, [])
+
+        self.assertEqual([], fake_xlrd.opened)
+
+    def test_process_rejects_oversized_workbook_before_opening(self):
+        processor, fake_xlrd = self.processor([])
+        self.fake_stat = SimpleNamespace(
+            st_mode=stat.S_IFREG,
+            st_size=parse.MAX_WORKBOOK_BYTES + 1,
+        )
+
+        with self.assertRaisesRegex(parse.InvalidDataException, "Workbook file cannot exceed 67108864 bytes"):
+            processor.process("fixture.xls", "People", False, [])
 
         self.assertEqual([], fake_xlrd.opened)
 
@@ -282,6 +622,39 @@ class ExcelProcessorTests(unittest.TestCase):
         with self.assertRaises(parse.InvalidDataException):
             processor.process("fixture.xls", "People", "yes", [parse.ExcelProcessor.CELL_TEXT])
 
+        self.assertEqual([], fake_xlrd.opened)
+
+    def test_process_rejects_non_callable_row_callback_before_opening_workbook(self):
+        fake_xlrd = FakeXlrd({"People": FakeSheet([])})
+        parse.xlrd = fake_xlrd
+        processor = parse.ExcelProcessor(None, lambda: None)
+
+        with self.assertRaises(parse.InvalidDataException) as context:
+            processor.process("fixture.xls", "People", False, [])
+
+        self.assertEqual("Row data callback must be callable", str(context.exception))
+        self.assertEqual([], fake_xlrd.opened)
+
+    def test_process_rejects_non_callable_done_callback_before_opening_workbook(self):
+        fake_xlrd = FakeXlrd({"People": FakeSheet([])})
+        parse.xlrd = fake_xlrd
+        processor = parse.ExcelProcessor(lambda _rowid, _values: None, None)
+
+        with self.assertRaises(parse.InvalidDataException) as context:
+            processor.process("fixture.xls", "People", False, [])
+
+        self.assertEqual("Parse completion callback must be callable", str(context.exception))
+        self.assertEqual([], fake_xlrd.opened)
+
+    def test_process_rejects_non_callable_exception_callback_before_opening_workbook(self):
+        fake_xlrd = FakeXlrd({"People": FakeSheet([])})
+        parse.xlrd = fake_xlrd
+        processor = parse.ExcelProcessor(lambda _rowid, _values: None, lambda: None, "invalid")
+
+        with self.assertRaises(parse.InvalidDataException) as context:
+            processor.process("fixture.xls", "People", False, [])
+
+        self.assertEqual("Exception callback must be callable or None", str(context.exception))
         self.assertEqual([], fake_xlrd.opened)
 
     def test_exception_callback_receives_row_errors_and_processing_continues(self):

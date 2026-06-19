@@ -37,24 +37,48 @@ Non-string text cells should fail through `InvalidDataException` before parser
 callbacks receive converted values or raw interpreter errors.
 
 Conversion error messages should summarize long, multiline, or unprintable cell
-values before they reach logs or caller error handlers.
+values and escape terminal or log control characters before they reach logs or
+caller error handlers.
 
 Target cell type declarations should be validated before opening workbook files
 so invalid schemas do not touch parser file resources.
+Unsupported date targets are rejected before workbook access.
 
-Workbook paths should be validated as non-empty .xls paths before opening files
-so unsupported or malformed workbook inputs fail before parser file resources are
-touched.
+Target schemas are limited to 256 target columns, and iterable declarations
+must be bounded before workbook files are opened.
+
+Workbook paths must resolve to regular `.xls` files no larger than 64 MiB before
+opening so unsupported, special-device, or oversized inputs fail before parser
+resources are touched. Sheets above 65,536 rows and text cells above 32,767
+characters are rejected before callback delivery. Formula evaluation is not
+performed; only cached workbook results are read, and incompatible cached values
+fail through the row exception path.
+
+An opened workbook with a missing or non-callable release hook must fail before
+sheet access or callbacks so completion never claims unperformed cleanup.
 
 Target cell types must be exact integer constants rather than booleans or
 numerically equal floats. Sheet names must be non-empty strings and header flags
 must be booleans before workbook resources are opened.
 
+Callback slots must be validated before opening workbook files so invalid row,
+completion, or exception handlers cannot trigger delayed raw interpreter errors
+after parser resources are touched.
+Workbook resources are released before a successful parse invokes the
+completion callback, so callback code does not run against an open workbook.
+
 GitHub Actions runs clean dependency installs and the local `make check`
 baseline on Python 3.10, 3.12, and 3.14 with pinned actions and read-only
 repository access. The gate includes `pip-audit` and generates a temporary
 synthetic `.xls` workbook to exercise the real parser boundary without
-committing spreadsheet data.
+committing spreadsheet data. The workflow does not persist checkout credentials
+after source retrieval.
+Pinned CodeQL analysis covers GitHub Actions and Python with upload permission
+scoped to the analysis job.
+
+The maintained runtime is Python 3.10 or newer. Dormant Python 2 compatibility
+branches are excluded from the supported parser path so validation and audit
+evidence cover the code that callers actually execute.
 
 ## Dependency and Supply Chain Security
 

@@ -9,8 +9,8 @@
 rows from a named Excel sheet with `xlrd` and converting cell values into
 declared target types.
 
-The parser preserves a Python 2-era API, but `parse.py` is importable and
-unit-tested under Python 3 for offline conversion and callback behavior.
+The parser preserves its callback-driven API while using a maintained Python
+3.10-or-newer runtime for conversion, workbook integration, and callback tests.
 
 ## Repository Contents
 
@@ -29,8 +29,7 @@ unit-tested under Python 3 for offline conversion and callback behavior.
 ### Prerequisites
 
 - Git
-- Python 3 for local tests
-- Python 2.7 when validating legacy syntax
+- Python 3.10 or newer
 - `xlrd>=2.0.1,<3` when processing real `.xls` workbook files
 
 ### Setup
@@ -58,6 +57,12 @@ this baseline.
   from `parse.py`.
 - Call `process(path, sheet_name, has_header, cell_types)` with target cell
   types such as `ExcelProcessor.CELL_TEXT`, `CELL_INT`, and `CELL_FLOAT`.
+- Target schemas are limited to 256 target columns, and iterable inputs are
+  bounded before workbook files are opened.
+- Callbacks are validated before opening a workbook. Row and completion
+  callbacks must be callable; the exception callback must be callable or `None`.
+- Workbook resources are released before the parse-completion callback runs,
+  including when that callback raises.
 - Use `ExcelProcessor.CELL_EMPTY` in `cell_types` to ignore a present source
   cell and receive `None` for that output position.
 - Target cell type declarations are validated before opening workbooks, so
@@ -66,7 +71,8 @@ this baseline.
   numerically equal floats are rejected instead of being treated as schema
   aliases.
 - Workbook paths are validated as non-empty .xls paths before opening files,
-  matching the documented `xlrd` 2.x `.xls` boundary.
+  matching the documented `xlrd` 2.x `.xls` boundary. Paths must resolve to
+  regular files no larger than 64 MiB.
 - Sheet names must be non-empty strings and `has_header` must be a real boolean;
   invalid processing options fail before workbook files are opened.
 - Numeric cells convert to `CELL_INT` only when the value is integer-valued;
@@ -77,10 +83,16 @@ this baseline.
   integer, or float conversion.
 - Non-finite numeric values such as `nan` and `inf` are rejected before they
   reach callbacks, including when numeric cells are requested as text.
-- Conversion errors summarize long, multiline, or unprintable values before raising
-  `InvalidDataException`.
+- Conversion errors summarize long, multiline, or unprintable values and escape
+  terminal or log control characters before raising `InvalidDataException`.
+- Sheets are limited to the `.xls` maximum of 65,536 rows, and text values are
+  limited to 32,767 characters before callbacks receive them.
+- Formula cells use the cached result stored in the workbook; this parser does
+  not calculate formulas. Missing or incompatible cached results fail through
+  the row exception path rather than being silently treated as missing cells.
 - Date conversion is intentionally unsupported and raises
   `InvalidDataException`.
+- Unsupported date targets are rejected before workbook access.
 
 ## Testing and Verification
 
@@ -94,15 +106,18 @@ make build
 ```
 
 `make check` runs Python 3 unit tests with synthetic workbook data, including a
-temporary real `.xls` file, compiles the parser and tests under Python 3, and
-runs a Python 2 syntax check when `python2` is available. `make lint` runs the
-full maintenance baseline, `make test` runs the unittest suite, and `make
-build` compiles the parser and tests under Python 3. `make audit` checks the
-pinned runtime and verification dependencies for known vulnerabilities.
+temporary real `.xls` file, compiles the parser and tests, and audits pinned
+dependencies. `make lint` runs the full maintenance baseline, `make test` runs
+the unittest suite, and `make build` compiles the parser and tests. The public
+`ExcelProcessor` constructor and `process` callback signatures remain covered
+while dormant `basestring`, `long`, and Python 2 syntax branches are removed.
 GitHub Actions performs clean installs and runs the same `make check` baseline
 on Python 3.10, 3.12, and 3.14 for pushes, pull requests, and manual
 dispatches. Workflow actions are pinned by commit and repository access is
-read-only.
+read-only. The workflow does not persist checkout credentials after source
+retrieval.
+The same workflow runs pinned CodeQL analysis for GitHub Actions and Python;
+only that job receives `security-events: write` to upload results.
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
 
@@ -140,16 +155,35 @@ When the required SDK or runtime is unavailable, use static checks and source re
   text-cell validation.
 - See `docs/plans/2026-06-09-conversion-error-value-summary.md` for bounded
   conversion error value summaries.
+- See `docs/plans/2026-06-14-control-character-error-summaries.md` for escaped
+  control characters in parser diagnostics.
 - See `docs/plans/2026-06-09-target-cell-type-validation.md` for target cell
   type validation before workbook access.
+- See `docs/plans/2026-06-14-target-cell-type-budget.md` for bounded target
+  schema normalization.
 - See `docs/plans/2026-06-09-workbook-path-validation.md` for workbook path
   validation before workbook access.
 - See `docs/plans/2026-06-10-ci-baseline.md` for the GitHub Actions baseline.
+- See `docs/plans/2026-06-14-codeql-analysis.md` for the pinned,
+  least-privilege code-scanning contract.
 - See `docs/plans/2026-06-10-processing-option-validation.md` for strict cell
   type, sheet name, and header flag validation before workbook access.
 - See `docs/plans/2026-06-12-real-xls-integration-coverage.md` for the real
   `.xls` integration contract.
+- See `docs/plans/2026-06-12-checkout-credential-boundary.md` for the hosted
+  checkout token boundary.
+- See `docs/plans/2026-06-13-callback-validation.md` for the fail-fast callback
+  configuration boundary.
+- See `docs/plans/2026-06-13-workbook-release-before-completion.md` for workbook
+  cleanup ordering before completion signaling.
+- Opened workbook processing requires a callable resource-release hook before
+  sheet access or callback delivery.
+- See `docs/plans/2026-06-13-workbook-release-hook-contract.md` for the
+  fail-closed cleanup capability boundary.
 
 ## Contributing
 
 Keep changes small and tied to the project that is already present in this repository. For code changes, document the toolchain used, avoid committing generated dependency directories or local configuration, and update this README when setup or verification steps change.
+
+The full gate can also be invoked through an absolute Makefile path from another
+working directory: `make -f /path/to/Excel-Parser/Makefile check`.

@@ -13,13 +13,16 @@ CI_WORKFLOW="$ROOT_DIR/.github/workflows/check.yml"
 CI_PLAN="$ROOT_DIR/docs/plans/2026-06-10-ci-baseline.md"
 OPTION_VALIDATION_PLAN="$ROOT_DIR/docs/plans/2026-06-10-processing-option-validation.md"
 REAL_XLS_PLAN="$ROOT_DIR/docs/plans/2026-06-12-real-xls-integration-coverage.md"
-
-cleanup_bytecode() {
-  find "$ROOT_DIR" -maxdepth 3 -type d -name "__pycache__" -prune -exec rm -rf {} + 2>/dev/null || true
-  find "$ROOT_DIR" -maxdepth 3 -type f -name "*.pyc" -delete 2>/dev/null || true
-}
-
-trap cleanup_bytecode EXIT
+CHECKOUT_CREDENTIAL_PLAN="$ROOT_DIR/docs/plans/2026-06-12-checkout-credential-boundary.md"
+CALLBACK_VALIDATION_PLAN="$ROOT_DIR/docs/plans/2026-06-13-callback-validation.md"
+PYTHON3_RUNTIME_PLAN="$ROOT_DIR/docs/plans/2026-06-13-python3-runtime-baseline.md"
+COMPLETION_ORDER_PLAN="$ROOT_DIR/docs/plans/2026-06-13-workbook-release-before-completion.md"
+RELEASE_HOOK_PLAN="$ROOT_DIR/docs/plans/2026-06-13-workbook-release-hook-contract.md"
+LOCATION_INDEPENDENT_MAKE_PLAN="$ROOT_DIR/docs/plans/2026-06-13-location-independent-make.md"
+TARGET_TYPE_BUDGET_PLAN="$ROOT_DIR/docs/plans/2026-06-14-target-cell-type-budget.md"
+CONTROL_CHARACTER_PLAN="$ROOT_DIR/docs/plans/2026-06-14-control-character-error-summaries.md"
+CODEQL_PLAN="$ROOT_DIR/docs/plans/2026-06-14-codeql-analysis.md"
+DATE_TARGET_PLAN="$ROOT_DIR/docs/plans/2026-06-15-date-target-preflight.md"
 
 require_file() {
   path=$1
@@ -52,19 +55,151 @@ for path in \
   "docs/plans/2026-06-10-ci-baseline.md" \
   "docs/plans/2026-06-10-processing-option-validation.md" \
   "docs/plans/2026-06-12-real-xls-integration-coverage.md" \
+  "docs/plans/2026-06-12-checkout-credential-boundary.md" \
+  "docs/plans/2026-06-13-callback-validation.md" \
+  "docs/plans/2026-06-13-python3-runtime-baseline.md" \
+  "docs/plans/2026-06-13-workbook-release-before-completion.md" \
+  "docs/plans/2026-06-13-workbook-release-hook-contract.md" \
+  "docs/plans/2026-06-13-location-independent-make.md" \
+  "docs/plans/2026-06-14-target-cell-type-budget.md" \
+  "docs/plans/2026-06-14-control-character-error-summaries.md" \
+  "docs/plans/2026-06-14-codeql-analysis.md" \
+  "docs/plans/2026-06-15-date-target-preflight.md" \
   "docs/plans/2026-06-08-fractional-int-conversion.md" \
   "docs/plans/2026-06-08-excel-parser-maintenance-baseline.md"; do
   require_file "$path"
 done
 
-python3 -m py_compile "$ROOT_DIR/parse.py" "$ROOT_DIR/tests/test_parse.py" "$ROOT_DIR/tests/test_xls_integration.py"
-python3 -m unittest discover -s "$ROOT_DIR/tests" -p "test*.py"
+for date_target_contract in \
+  "SUPPORTED_TARGET_CELL_TYPES = (CELL_EMPTY, CELL_TEXT, CELL_INT, CELL_FLOAT)" \
+  "if cell_type not in self.SUPPORTED_TARGET_CELL_TYPES:" \
+  'raise InvalidDataException("Date target type is not supported")' \
+  "test_process_rejects_date_target_before_opening_workbook" \
+  "test_process_rejects_date_in_mixed_targets_before_opening_workbook"; do
+  if ! grep -Fq "$date_target_contract" "$ROOT_DIR/parse.py" "$ROOT_DIR/tests/test_parse.py"; then
+    printf '%s\n' "Date-target preflight contract is missing: $date_target_contract" >&2
+    exit 1
+  fi
+done
 
-if command -v python2 >/dev/null 2>&1; then
-  python2 -m py_compile "$ROOT_DIR/parse.py"
-else
-  printf '%s\n' "Skipping Python 2 compile check: python2 is not installed."
+for date_target_doc in AGENTS.md README.md SECURITY.md VISION.md CHANGES.md; do
+  if ! grep -Fq "Unsupported date targets are rejected before workbook access." "$ROOT_DIR/$date_target_doc"; then
+    printf '%s\n' "Date-target preflight guidance is missing from $date_target_doc" >&2
+    exit 1
+  fi
+done
+
+for date_target_plan_contract in \
+  "status: completed" \
+  "## Work Completed" \
+  "## Verification Completed" \
+  "all 38 unit and real" \
+  "Eight isolated hostile mutations were rejected" \
+  "e2899c533ef955d349610e7ca677844c63547916" \
+  'pull-request workflow run `27530495018`' \
+  "no known vulnerabilities"; do
+  if ! grep -Fq "$date_target_plan_contract" "$DATE_TARGET_PLAN"; then
+    printf '%s\n' "Date-target preflight plan must record completed evidence: $date_target_plan_contract" >&2
+    exit 1
+  fi
+done
+
+python3 - "$ROOT_DIR/parse.py" <<'PY'
+import pathlib
+import sys
+
+source = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")
+process = source.split("    def process(", 1)[1].split("    def validate_callbacks", 1)[0]
+release = 'release_resources()'
+completion = 'self.parsedonecallback()'
+if process.count(release) != 2 or process.count(completion) != 1:
+    raise SystemExit("Workbook release must cover success and failure before one completion signal.")
+if process.rindex(release) > process.index(completion):
+    raise SystemExit("Workbook resources must be released before parse completion is signaled.")
+for contract in (
+    "except BaseException as processing_error:",
+    "except BaseException as release_error:",
+    "raise processing_error from release_error",
+):
+    if contract not in process:
+        raise SystemExit("Workbook cleanup must preserve the primary processing failure.")
+PY
+
+python3 - "$ROOT_DIR/parse.py" <<'PY'
+import pathlib
+import sys
+
+source = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")
+process = source.split("    def process(", 1)[1].split("    def validate_callbacks", 1)[0]
+required = [
+    'release_resources = getattr(book, "release_resources", None)',
+    "if not callable(release_resources):",
+    'raise InvalidDataException("Opened workbook must provide callable release_resources")',
+    "sheet = book.sheet_by_name(sheet_name)",
+]
+positions = [process.find(item) for item in required]
+if -1 in positions or positions != sorted(positions):
+    raise SystemExit("Workbook release hook must be validated before sheet access.")
+if "if release_resources is not None:" in process:
+    raise SystemExit("Workbook release must not remain optional before completion.")
+PY
+
+for release_hook_contract in \
+  "test_process_rejects_missing_release_hook_before_sheet_access" \
+  "test_process_rejects_non_callable_release_hook_before_sheet_access" \
+  'self.assertFalse(book.sheet_requested)' \
+  'self.assertEqual([], completions)'; do
+  if ! grep -Fq "$release_hook_contract" "$ROOT_DIR/tests/test_parse.py"; then
+    printf '%s\n' "Workbook release-hook regression is missing: $release_hook_contract" >&2
+    exit 1
+  fi
+done
+
+if ! grep -Fq "status: completed" "$RELEASE_HOOK_PLAN" ||
+  ! grep -Fq "Python 3.12.8 and Python 3.14.0" "$RELEASE_HOOK_PLAN" ||
+  ! grep -Fq "hostile mutations were rejected" "$RELEASE_HOOK_PLAN"; then
+  printf '%s\n' "Workbook release-hook plan must record truthful completed verification." >&2
+  exit 1
 fi
+
+if ! grep -Fq "requires a callable resource-release hook" "$ROOT_DIR/README.md" ||
+  ! grep -Fq "missing or non-callable release hook" "$ROOT_DIR/SECURITY.md" ||
+  ! grep -Fq "Missing workbook release hooks fail before sheet access" "$ROOT_DIR/VISION.md" ||
+  ! grep -Fq "Required a callable workbook release hook" "$ROOT_DIR/CHANGES.md" ||
+  ! grep -Fq "Require callable workbook resource release" "$ROOT_DIR/AGENTS.md"; then
+  printf '%s\n' "Project guidance must preserve the fail-closed workbook release-hook contract." >&2
+  exit 1
+fi
+
+for completion_order_contract in \
+  "test_process_releases_workbook_before_completion_callback" \
+  "test_process_releases_workbook_before_raising_completion_callback" \
+  "completion_states.append(book.released)" \
+  'self.assertTrue(fake_xlrd.opened[0][2].released)'; do
+  if ! grep -Fq "$completion_order_contract" "$ROOT_DIR/tests/test_parse.py"; then
+    printf '%s\n' "Workbook completion-order regression is missing: $completion_order_contract" >&2
+    exit 1
+  fi
+done
+
+if ! grep -Fq "status: completed" "$COMPLETION_ORDER_PLAN" ||
+  ! grep -Fq "Python 3.12.8 and Python 3.14.0" "$COMPLETION_ORDER_PLAN" ||
+  ! grep -Fq "hostile mutations were rejected" "$COMPLETION_ORDER_PLAN" ||
+  ! grep -Fq "No private workbook" "$COMPLETION_ORDER_PLAN"; then
+  printf '%s\n' "Workbook completion-order plan must record truthful completed verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "resources are released before the parse-completion callback" "$ROOT_DIR/README.md" ||
+  ! grep -Fq "resources are released before a successful parse invokes" "$ROOT_DIR/SECURITY.md" ||
+  ! grep -Fq "Workbook release completes before the parse-completion callback" "$ROOT_DIR/VISION.md" ||
+  ! grep -Fq "Released workbook resources before invoking" "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' "Project docs must preserve workbook release-before-completion ordering." >&2
+  exit 1
+fi
+
+(cd "$ROOT_DIR" && python3 -m py_compile parse.py tests/test_parse.py tests/test_xls_integration.py)
+(cd "$ROOT_DIR" && python3 -m unittest discover -s tests -p "test*.py")
 
 if ! grep -Fq "status: completed" "$PLAN"; then
   printf '%s\n' "Plan must be marked completed." >&2
@@ -75,7 +210,7 @@ if ! grep -Fq "make check" "$ROOT_DIR/README.md" ||
   ! grep -Fq "GitHub Actions" "$ROOT_DIR/README.md" ||
   ! grep -Fq "make build" "$ROOT_DIR/README.md" ||
   ! grep -Fq "xlrd" "$ROOT_DIR/README.md" ||
-  ! grep -Fq "Python 2" "$ROOT_DIR/README.md" ||
+  ! grep -Fq "Python 3.10 or newer" "$ROOT_DIR/README.md" ||
   ! grep -Fq "synthetic" "$ROOT_DIR/README.md" ||
   ! grep -Fq "fractional" "$ROOT_DIR/README.md"; then
   printf '%s\n' "README must document the check command, xlrd dependency, legacy Python posture, and fixture safety." >&2
@@ -87,8 +222,28 @@ if ! grep -Fq "non-string text cells" "$ROOT_DIR/README.md"; then
   exit 1
 fi
 
-if ! grep -Fq "Conversion errors summarize long, multiline, or unprintable values" "$ROOT_DIR/README.md"; then
+if ! grep -Fq "Conversion errors summarize long, multiline, or unprintable values and escape" "$ROOT_DIR/README.md"; then
   printf '%s\n' "README must document conversion error value summaries." >&2
+  exit 1
+fi
+
+for control_character_contract in \
+  'character.isprintable()' \
+  'repr(character)[1:-1]' \
+  'summary_length + len(token) > MAX_ERROR_VALUE_LENGTH' \
+  'test_conversion_errors_escape_control_characters' \
+  'test_conversion_error_summary_preserves_printable_unicode' \
+  'test_conversion_error_summary_bounds_complete_escape_tokens'; do
+  if ! grep -Fq "$control_character_contract" "$ROOT_DIR/parse.py" "$ROOT_DIR/tests/test_parse.py"; then
+    printf '%s\n' "Control-character error-summary contract is missing: $control_character_contract" >&2
+    exit 1
+  fi
+done
+
+if ! grep -Fq "status: completed" "$CONTROL_CHARACTER_PLAN" ||
+  ! grep -Fq "make check" "$CONTROL_CHARACTER_PLAN" ||
+  ! grep -Fq "hostile mutations" "$CONTROL_CHARACTER_PLAN"; then
+  printf '%s\n' "Control-character error-summary plan must remain completed with verification recorded." >&2
   exit 1
 fi
 
@@ -103,7 +258,7 @@ if ! grep -Fq "Workbook paths are validated as non-empty .xls paths before openi
 fi
 
 for option_contract in \
-  "integer_types = (int, long)" \
+  "not isinstance(cell_type, int)" \
   "or isinstance(cell_type, bool)" \
   "def validate_sheet_name" \
   "def validate_has_header" \
@@ -138,8 +293,9 @@ for integration_contract in \
 done
 
 if ! grep -Fq "Status: Completed" "$REAL_XLS_PLAN" ||
-  ! grep -Fq "22 tests" "$REAL_XLS_PLAN" ||
-  ! grep -Fq "Python 3.10, 3.12, and 3.14" "$REAL_XLS_PLAN"; then
+  ! grep -Fq "Clean Python 3.12.8 and 3.14.0 environments: \`make check\` passed all 22 tests," "$REAL_XLS_PLAN" ||
+  ! grep -Fq "GitHub Actions run \`27391562146\` passed on Python 3.10, 3.12, and 3.14." "$REAL_XLS_PLAN" ||
+  ! grep -Fq "Five isolated hostile mutations were rejected" "$REAL_XLS_PLAN"; then
   printf '%s\n' "Real XLS integration plan must remain completed with matrix verification recorded." >&2
   exit 1
 fi
@@ -162,7 +318,7 @@ if ! grep -Fq "Non-string text cells" "$ROOT_DIR/SECURITY.md"; then
   exit 1
 fi
 
-if ! grep -Fq "Conversion error messages should summarize" "$ROOT_DIR/SECURITY.md"; then
+if ! grep -Fq "escape terminal or log control characters" "$ROOT_DIR/SECURITY.md"; then
   printf '%s\n' "SECURITY must document conversion error value summaries." >&2
   exit 1
 fi
@@ -172,13 +328,27 @@ if ! grep -Fq "Target cell type declarations should be validated before opening 
   exit 1
 fi
 
-if ! grep -Fq "Workbook paths should be validated as non-empty .xls paths before opening files" "$ROOT_DIR/SECURITY.md"; then
+if ! grep -Fq 'Workbook paths must resolve to regular `.xls` files no larger than 64 MiB' "$ROOT_DIR/SECURITY.md"; then
   printf '%s\n' "SECURITY must document workbook path validation before workbook access." >&2
   exit 1
 fi
 
+for bounded_input_doc in README.md SECURITY.md VISION.md AGENTS.md CHANGES.md; do
+  if ! grep -Fq "64 MiB" "$ROOT_DIR/$bounded_input_doc"; then
+    printf '%s\n' "$bounded_input_doc must document the workbook size boundary." >&2
+    exit 1
+  fi
+done
+
 if ! grep -Fq "actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10" "$CI_WORKFLOW" ||
   ! grep -Fq "actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405" "$CI_WORKFLOW" ||
+  ! grep -Fq 'name: CodeQL (${{ matrix.language }})' "$CI_WORKFLOW" ||
+  ! grep -Fq "security-events: write" "$CI_WORKFLOW" ||
+  ! grep -Fq "language: [actions, python]" "$CI_WORKFLOW" ||
+  ! grep -Fq "github/codeql-action/init@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4" "$CI_WORKFLOW" ||
+  ! grep -Fq 'languages: ${{ matrix.language }}' "$CI_WORKFLOW" ||
+  ! grep -Fq "build-mode: none" "$CI_WORKFLOW" ||
+  ! grep -Fq "github/codeql-action/analyze@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4" "$CI_WORKFLOW" ||
   ! grep -Fq 'python-version: ["3.10", "3.12", "3.14"]' "$CI_WORKFLOW" ||
   ! grep -Fq 'python-version: ${{ matrix.python-version }}' "$CI_WORKFLOW" ||
   ! grep -Fq "python -m pip install -r requirements.txt -r requirements-dev.txt" "$CI_WORKFLOW" ||
@@ -192,17 +362,57 @@ if ! grep -Fq "actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10" "$CI_W
   exit 1
 fi
 
+if [ "$(grep -Fc "uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10" "$CI_WORKFLOW")" -ne 2 ] ||
+  [ "$(grep -Fc "persist-credentials: false" "$CI_WORKFLOW")" -ne 2 ] ||
+  [ "$(grep -Fc "security-events: write" "$CI_WORKFLOW")" -ne 1 ] ||
+  [ "$(grep -Fc "github/codeql-action/" "$CI_WORKFLOW")" -ne 2 ]; then
+  printf '%s\n' "GitHub Actions must use two pinned credential-free checkouts and one CodeQL upload permission." >&2
+  exit 1
+fi
+
+if ! awk '
+  /uses: actions\/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10/ { checkout = 1; options = 0; next }
+  checkout && /^[[:space:]]+with:[[:space:]]*$/ { options = 1; next }
+  checkout && options && /^[[:space:]]+persist-credentials: false[[:space:]]*$/ { protected += 1; checkout = 0; options = 0; next }
+  checkout && /^[[:space:]]+- / { checkout = 0; options = 0 }
+  END { exit protected == 2 ? 0 : 1 }
+' "$CI_WORKFLOW"; then
+  printf '%s\n' "Checkout credential persistence must be disabled on both pinned checkout steps." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Status: Completed" "$CODEQL_PLAN" ||
+  ! grep -Fq 'The repository and external-directory `make check` passed.' "$CODEQL_PLAN" ||
+  ! grep -Fq "hostile CodeQL workflow mutations were rejected" "$CODEQL_PLAN"; then
+  printf '%s\n' "CodeQL plan must record completed status and verification." >&2
+  exit 1
+fi
+
+for codeql_evidence in \
+  "$ROOT_DIR/README.md:GitHub Actions and Python" \
+  "$ROOT_DIR/README.md:security-events: write" \
+  "$ROOT_DIR/SECURITY.md:Pinned CodeQL analysis" \
+  "$ROOT_DIR/VISION.md:Keep pinned CodeQL coverage" \
+  "$ROOT_DIR/CHANGES.md:least-privilege CodeQL analysis"; do
+  evidence_file=${codeql_evidence%%:*}
+  evidence_contract=${codeql_evidence#*:}
+  if ! grep -Fq -- "$evidence_contract" "$evidence_file"; then
+    printf '%s\n' "$evidence_file is missing CodeQL evidence: $evidence_contract" >&2
+    exit 1
+  fi
+done
+
 if ! grep -Fxq "xlrd==2.0.2" "$ROOT_DIR/requirements.txt" ||
   ! grep -Fxq "pip-audit==2.10.0" "$ROOT_DIR/requirements-dev.txt" ||
   ! grep -Fxq "xlwt==1.3.0" "$ROOT_DIR/requirements-dev.txt" ||
-  ! grep -Fq 'python3 -m pip_audit -r requirements.txt -r requirements-dev.txt' "$ROOT_DIR/Makefile"; then
+  ! grep -Fq 'python3 -m pip_audit -r "$(ROOT)/requirements.txt" -r "$(ROOT)/requirements-dev.txt"' "$ROOT_DIR/Makefile"; then
   printf '%s\n' "Dependency and audit contracts must remain pinned." >&2
   exit 1
 fi
 
 if grep -Fq "except Exception," "$ROOT_DIR/parse.py" ||
   ! grep -Fq "_MissingXlrd" "$ROOT_DIR/parse.py" ||
-  ! grep -Fq "string_types" "$ROOT_DIR/parse.py" ||
+  ! grep -Fq "isinstance(data, str)" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "MAX_ERROR_VALUE_LENGTH" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "VALID_CELL_TYPES" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "def validate_workbook_path" "$ROOT_DIR/parse.py" ||
@@ -211,7 +421,6 @@ if grep -Fq "except Exception," "$ROOT_DIR/parse.py" ||
   ! grep -Fq "def validate_cell_types" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "cell_types = self.validate_cell_types(cell_types)" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "def format_error_value" "$ROOT_DIR/parse.py" ||
-  ! grep -Fq "value.splitlines()" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "cell_types=None" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "newtype == ExcelProcessor.CELL_EMPTY" "$ROOT_DIR/parse.py" ||
   ! grep -Fq "def convert_number_to_int" "$ROOT_DIR/parse.py" ||
@@ -232,6 +441,117 @@ if grep -Fq "except Exception," "$ROOT_DIR/parse.py" ||
   exit 1
 fi
 
+if grep -Fq "value.splitlines()" "$ROOT_DIR/parse.py"; then
+  printf '%s\n' "Parser error summaries must remain bounded without copying full multiline values." >&2
+  exit 1
+fi
+
+for hostile_boundary_contract in \
+  "MAX_WORKBOOK_BYTES = 64 * 1024 * 1024" \
+  "MAX_TEXT_LENGTH = 32767" \
+  "MAX_XLS_ROWS = 65536" \
+  "test_process_reports_cell_value_index_error_instead_of_emitting_missing_value" \
+  "test_process_preserves_row_error_when_resource_release_also_fails" \
+  "test_process_rejects_non_regular_workbook_before_opening" \
+  "test_process_rejects_oversized_workbook_before_opening" \
+  "test_process_rejects_invalid_sheet_row_count_and_releases_workbook" \
+  "test_clean_text_rejects_values_above_xls_string_limit" \
+  "test_convert_type_rejects_boolean_source_type_aliases" \
+  "test_numeric_source_rejects_non_numeric_and_boolean_values" \
+  "test_error_summary_does_not_copy_entire_multiline_value" \
+  "test_process_rejects_formula_without_cached_number_and_date_cells"; do
+  if ! grep -Fq "$hostile_boundary_contract" "$ROOT_DIR/parse.py" "$ROOT_DIR/tests/test_parse.py" "$ROOT_DIR/tests/test_xls_integration.py"; then
+    printf '%s\n' "Hostile workbook boundary contract is missing: $hostile_boundary_contract" >&2
+    exit 1
+  fi
+done
+
+for obsolete_python_contract in \
+  "basestring" \
+  "integer_types" \
+  "string_types" \
+  "int, long" \
+  "class _MissingXlrd(object)" \
+  "class ExcelProcessor(object)" \
+  "class FakeSheet(object)" \
+  "class FakeBook(object)" \
+  "class FakeXlrd(object)"; do
+  if grep -Fq "$obsolete_python_contract" "$ROOT_DIR/parse.py" "$ROOT_DIR/tests/test_parse.py"; then
+    printf '%s\n' "Dormant Python 2 compatibility contract returned: $obsolete_python_contract" >&2
+    exit 1
+  fi
+done
+
+python3 - "$ROOT_DIR/scripts/check-baseline.sh" <<'PY'
+from pathlib import Path
+import sys
+
+source = Path(sys.argv[1]).read_text(encoding="utf-8")
+runtime = "python" + "2"
+if "command -v " + runtime in source or runtime + " -m py_compile" in source:
+    raise SystemExit("The maintained gate must not retain optional Python 2 compilation.")
+PY
+
+if ! grep -Fq "test_public_callback_api_signatures_are_preserved" "$ROOT_DIR/tests/test_parse.py" ||
+  ! grep -Fq "inspect.signature(parse.ExcelProcessor.__init__)" "$ROOT_DIR/tests/test_parse.py" ||
+  ! grep -Fq "inspect.signature(parse.ExcelProcessor.process)" "$ROOT_DIR/tests/test_parse.py" ||
+  ! grep -Fq 'constructor.parameters["exceptioncallback"].default' "$ROOT_DIR/tests/test_parse.py" ||
+  ! grep -Fq 'process.parameters["cell_types"].default' "$ROOT_DIR/tests/test_parse.py"; then
+  printf '%s\n' "Python 3 migration must preserve the public callback API signatures." >&2
+  exit 1
+fi
+
+for document in "$ROOT_DIR/README.md" "$ROOT_DIR/AGENTS.md" "$ROOT_DIR/SECURITY.md" "$ROOT_DIR/VISION.md" "$ROOT_DIR/CHANGES.md"; do
+  if ! grep -Fq "Python 3.10" "$document"; then
+    printf '%s\n' "$document must document the maintained Python 3.10+ runtime." >&2
+    exit 1
+  fi
+done
+
+if grep -Fq "Port to supported Python syntax in a dedicated pass" "$ROOT_DIR/VISION.md"; then
+  printf '%s\n' "VISION must move the completed Python runtime port out of next priorities." >&2
+  exit 1
+fi
+
+if ! grep -Fq "status: completed" "$PYTHON3_RUNTIME_PLAN" ||
+  ! grep -Fq "Python 3.12.8 and Python 3.14.0" "$PYTHON3_RUNTIME_PLAN" ||
+  ! grep -Fq "hostile mutations were rejected" "$PYTHON3_RUNTIME_PLAN" ||
+  ! grep -Fq "temporary synthetic .xls" "$PYTHON3_RUNTIME_PLAN"; then
+  printf '%s\n' "Python 3 runtime plan must record truthful completed verification." >&2
+  exit 1
+fi
+
+for callback_contract in \
+  "def validate_callbacks(self)" \
+  "if not callable(self.rowdatacallback)" \
+  "if not callable(self.parsedonecallback)" \
+  "self.exceptioncallback is not None and not callable(self.exceptioncallback)" \
+  "Row data callback must be callable" \
+  "Parse completion callback must be callable" \
+  "Exception callback must be callable or None"; do
+  if ! grep -Fq "$callback_contract" "$ROOT_DIR/parse.py"; then
+    printf '%s\n' "Parser callback contract is missing: $callback_contract" >&2
+    exit 1
+  fi
+done
+
+python3 - "$ROOT_DIR/parse.py" <<'PY'
+import pathlib
+import sys
+
+source = pathlib.Path(sys.argv[1]).read_text()
+try:
+    process = source.index("    def process(self, excel, sheet_name, has_header, cell_types=None):")
+    callback_validation = source.index("        self.validate_callbacks()", process)
+    cell_type_validation = source.index("        cell_types = self.validate_cell_types(cell_types)", process)
+    workbook_open = source.index("        book = xlrd.open_workbook(excel, on_demand=True)", process)
+except ValueError as exc:
+    raise SystemExit("Callback validation process boundary is missing") from exc
+
+if not process < callback_validation < cell_type_validation < workbook_open:
+    raise SystemExit("Callback validation must be the first process boundary before workbook access")
+PY
+
 if ! grep -Fq "FakeXlrd" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_process_skips_header_and_handles_missing_cells" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_process_allows_cell_empty_targets_to_skip_present_values" "$ROOT_DIR/tests/test_parse.py" ||
@@ -247,6 +567,9 @@ if ! grep -Fq "FakeXlrd" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_process_rejects_invalid_target_types_before_opening_workbook" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_process_rejects_non_xls_workbook_path_before_opening_workbook" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_process_rejects_blank_workbook_path_before_opening_workbook" "$ROOT_DIR/tests/test_parse.py" ||
+  ! grep -Fq "test_process_rejects_non_callable_row_callback_before_opening_workbook" "$ROOT_DIR/tests/test_parse.py" ||
+  ! grep -Fq "test_process_rejects_non_callable_done_callback_before_opening_workbook" "$ROOT_DIR/tests/test_parse.py" ||
+  ! grep -Fq "test_process_rejects_non_callable_exception_callback_before_opening_workbook" "$ROOT_DIR/tests/test_parse.py" ||
   ! grep -Fq "test_exception_callback_receives_row_errors_and_processing_continues" "$ROOT_DIR/tests/test_parse.py"; then
   printf '%s\n' "Offline tests must cover fake-workbook processing and callback error behavior." >&2
   exit 1
@@ -270,6 +593,38 @@ fi
 
 if ! grep -Fq "GitHub Actions" "$CI_PLAN" || ! grep -Fq "make check" "$CI_PLAN"; then
   printf '%s\n' "CI baseline plan must record hosted make check verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "status: completed" "$CHECKOUT_CREDENTIAL_PLAN" ||
+  ! grep -Fq 'Python 3.12 `make check` passed' "$CHECKOUT_CREDENTIAL_PLAN" ||
+  ! grep -Fq "external working directory" "$CHECKOUT_CREDENTIAL_PLAN" ||
+  ! grep -Fq "hostile mutations were rejected" "$CHECKOUT_CREDENTIAL_PLAN"; then
+  printf '%s\n' "Checkout credential boundary plan must record completed verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "does not persist checkout credentials" "$ROOT_DIR/README.md" ||
+  ! grep -Fq "does not persist checkout credentials" "$ROOT_DIR/SECURITY.md" ||
+  ! grep -Fq "credential-free checkout" "$ROOT_DIR/VISION.md" ||
+  ! grep -Fq "Stopped GitHub Actions checkout credential persistence" "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' "Project guidance must document the checkout credential boundary." >&2
+  exit 1
+fi
+
+if ! grep -Fq "status: completed" "$CALLBACK_VALIDATION_PLAN" ||
+  ! grep -Fq "all 25 unit and integration tests passed" "$CALLBACK_VALIDATION_PLAN" ||
+  ! grep -Fq "callback validation failed" "$CALLBACK_VALIDATION_PLAN" ||
+  ! grep -Fq "validation after workbook option checks failed" "$CALLBACK_VALIDATION_PLAN"; then
+  printf '%s\n' "Callback validation plan must record completed verification." >&2
+  exit 1
+fi
+
+if ! grep -Fq "Callbacks are validated before opening a workbook" "$ROOT_DIR/README.md" ||
+  ! grep -Fq "Callback slots must be validated before opening workbook files" "$ROOT_DIR/SECURITY.md" ||
+  ! grep -Fq "Callback configuration fails fast before workbook files are opened" "$ROOT_DIR/VISION.md" ||
+  ! grep -Fq "Validated parser callbacks before opening workbook files" "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' "Project guidance must document fail-fast callback validation." >&2
   exit 1
 fi
 
@@ -303,6 +658,64 @@ if ! grep -Fq "lint:" "$ROOT_DIR/Makefile" ||
   ! grep -Fq "build:" "$ROOT_DIR/Makefile" ||
   ! grep -Fq "check: lint test build" "$ROOT_DIR/Makefile"; then
   printf '%s\n' "Makefile must expose lint, test, build, and check gates." >&2
+  exit 1
+fi
+
+if ! grep -Fq 'ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))' "$ROOT_DIR/Makefile" ||
+  ! grep -Fq '"$(ROOT)/scripts/check-baseline.sh"' "$ROOT_DIR/Makefile" ||
+  ! grep -Fq 'cd "$(ROOT)" && python3 -m unittest discover' "$ROOT_DIR/Makefile" ||
+  ! grep -Fq '"$(ROOT)/parse.py"' "$ROOT_DIR/Makefile" ||
+  ! grep -Fq '"$(ROOT)/requirements.txt"' "$ROOT_DIR/Makefile" ||
+  ! grep -Fq '"$(ROOT)/requirements-dev.txt"' "$ROOT_DIR/Makefile"; then
+  printf '%s\n' "Makefile verification commands must resolve paths from the loaded Makefile." >&2
+  exit 1
+fi
+
+if ! grep -Eq '^\(cd "\$ROOT_DIR" && python3 -m py_compile parse\.py tests/test_parse\.py tests/test_xls_integration\.py\)$' "$ROOT_DIR/scripts/check-baseline.sh" ||
+  ! grep -Eq '^\(cd "\$ROOT_DIR" && python3 -m unittest discover -s tests -p "test\*\.py"\)$' "$ROOT_DIR/scripts/check-baseline.sh"; then
+  printf '%s\n' "Baseline checker Python probes must run from the repository root." >&2
+  exit 1
+fi
+
+if ! grep -Fq "status: completed" "$LOCATION_INDEPENDENT_MAKE_PLAN" ||
+  ! grep -Fq "from /tmp" "$LOCATION_INDEPENDENT_MAKE_PLAN"; then
+  printf '%s\n' "Location-independent Make plan must record completed status and external verification." >&2
+  exit 1
+fi
+
+for target_type_budget_contract in \
+  "MAX_TARGET_COLUMNS = 256" \
+  "islice(iter(cell_types), MAX_TARGET_COLUMNS + 1)" \
+  "Target cell types cannot exceed" \
+  "test_process_accepts_exact_xls_target_column_limit" \
+  "test_process_rejects_target_columns_above_xls_limit_before_opening_workbook" \
+  "test_process_bounds_unbounded_target_type_iterables_before_workbook_access"; do
+  if ! grep -Fq "$target_type_budget_contract" "$ROOT_DIR/parse.py" "$ROOT_DIR/tests/test_parse.py"; then
+    printf '%s\n' "Target cell type budget contract is missing: $target_type_budget_contract" >&2
+    exit 1
+  fi
+done
+
+if ! grep -Fq "status: completed" "$TARGET_TYPE_BUDGET_PLAN" ||
+  ! grep -Fq "make check" "$TARGET_TYPE_BUDGET_PLAN" ||
+  ! grep -Fq "hostile mutations were rejected" "$TARGET_TYPE_BUDGET_PLAN"; then
+  printf '%s\n' "Target cell type budget plan must record completed verification." >&2
+  exit 1
+fi
+
+for document in "$ROOT_DIR/README.md" "$ROOT_DIR/SECURITY.md" "$ROOT_DIR/VISION.md" "$ROOT_DIR/CHANGES.md" "$ROOT_DIR/AGENTS.md"; do
+  if ! grep -Fq "256 target columns" "$document"; then
+    printf '%s\n' "$document must document the 256 target columns boundary." >&2
+    exit 1
+  fi
+done
+
+if ! grep -Fq "absolute Makefile path" "$ROOT_DIR/README.md" ||
+  ! grep -Fq "working directory" "$ROOT_DIR/README.md" ||
+  ! grep -Fq "Make verification resolves repository paths" "$ROOT_DIR/VISION.md" ||
+  ! grep -Fq "External baseline" "$ROOT_DIR/AGENTS.md" ||
+  ! grep -Fq "Made Make verification independent" "$ROOT_DIR/CHANGES.md"; then
+  printf '%s\n' "Project guidance must document location-independent Make verification." >&2
   exit 1
 fi
 

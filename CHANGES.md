@@ -1,7 +1,43 @@
 # Changes
 
+## 2026-06-19
+
+- Required regular `.xls` files no larger than 64 MiB and bounded sheets and
+  text cells to the legacy format's 65,536-row and 32,767-character limits.
+- Stopped treating inconsistent `cell_value` failures as missing cells and
+  rejected boolean aliases for source cell types.
+- Preserved primary processing exceptions when workbook cleanup also fails and
+  bounded multiline error summaries without copying full values.
+- Added real-workbook coverage for formula cached-result and date rejection.
+
+## 2026-06-15
+
+- Unsupported date targets are rejected before workbook access.
+
+## 2026-06-14
+
+- Added pinned, least-privilege CodeQL analysis for GitHub Actions and Python
+  to the hosted workflow.
+- Limited target schemas to 256 target columns and bounded iterable
+  normalization before workbook access.
+
+## 2026-06-13
+
+- Made Make verification independent of the caller's working directory.
+- Required a callable workbook release hook before sheet access and completion
+  signaling.
+- Released workbook resources before invoking the parse-completion callback.
+- Established Python 3.10 or newer as the maintained runtime and removed
+  dormant `basestring`, `long`, old-style class, and Python 2 compile branches.
+- Added a regression for the preserved `ExcelProcessor` constructor and
+  `process` callback signatures.
+- Validated parser callbacks before opening workbook files so invalid row,
+  completion, and exception handlers fail through `InvalidDataException`.
+
 ## 2026-06-12
 
+- Stopped GitHub Actions checkout credential persistence and added an exact
+  contract for the single pinned checkout step.
 - Added an end-to-end test that generates a temporary synthetic `.xls`
   workbook and processes it through the real `xlrd` boundary.
 - Pinned the test-only `xlwt` writer and extended the maintenance baseline to
