@@ -1,6 +1,6 @@
 .PHONY: audit build check lint test
 
-ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+override ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 
 lint:
 	@"$(ROOT)/scripts/check-baseline.sh"
