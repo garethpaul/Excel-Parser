@@ -63,4 +63,9 @@ status: completed
   external Make passes on Python 3.14.
 - Python 3.10 compilation, tests, and static contracts pass; the embedded-NUL workbook path hostile mutation rejected the regression. Local `pip-audit`
   scratch-venv setup is blocked by unavailable `ensurepip`.
-- Pending: hosted Python 3.10/3.12/3.14 checks, CodeQL, review, and merge.
+- Implementation head `a3a39afa449f08a1f0fdc6cdd63c958b007245f1` passes hosted
+  run `28246685183` on Python 3.10, 3.12, and 3.14, including audits and CodeQL
+  for Actions and Python.
+- `codex review --base origin/master` was attempted and skipped after HTTP 401
+  authentication errors.
+- Pending: evidence-only final-head hosted checks and merge verification.

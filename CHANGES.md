@@ -35,8 +35,12 @@ Validation:
   zero known audit vulnerabilities; external Make passes on Python 3.14.
 - Python 3.10 passes compilation, all 49 tests, static contracts, and the hostile
   mutation. Its local `pip-audit` scratch environment is blocked by unavailable
-  `ensurepip`; hosted Python 3.10 remains the authoritative full gate.
-- Hosted checks, CodeQL, and review are pending.
+  `ensurepip`; hosted Python 3.10 is the authoritative full gate.
+- Implementation head `a3a39afa449f08a1f0fdc6cdd63c958b007245f1` passed hosted
+  run `28246685183` on Python 3.10, 3.12, and 3.14, including audits and CodeQL
+  for Actions and Python.
+- `codex review --base origin/master` was attempted and skipped after HTTP 401
+  authentication errors, per the maintenance loop policy.
 
 Bugs and findings:
 
@@ -46,11 +50,11 @@ Bugs and findings:
 
 Blockers:
 
-- None for local implementation.
+- Codex review authentication is unavailable; executable hosted gates are green.
 
 Next action:
 
-- Push the focused PR, then verify hosted Python 3.10/3.12/3.14 and CodeQL.
+- Verify the evidence-only final PR head, then merge that exact commit.
 
 ## 2026-06-19
 

@@ -49,5 +49,9 @@ filesystem boundary.
 - Python 3.12 and 3.14 `make check` pass with zero known vulnerabilities;
   external Make passes on Python 3.14.
 - Python 3.10 compilation, tests, and static contracts pass; the embedded-NUL workbook path hostile mutation rejected the regression. Local audit scratch
-  setup is blocked by unavailable `ensurepip` and awaits hosted verification.
-- Hosted checks, CodeQL, exact-head review, and merge verification are pending.
+  setup is blocked by unavailable `ensurepip`.
+- Implementation head `a3a39afa449f08a1f0fdc6cdd63c958b007245f1` passes hosted
+  run `28246685183` on Python 3.10, 3.12, and 3.14, including audits and CodeQL
+  for Actions and Python.
+- Codex review was attempted and skipped after HTTP 401 authentication errors.
+- The evidence-only final head still requires hosted verification before merge.
