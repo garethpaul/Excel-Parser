@@ -600,6 +600,17 @@ class ExcelProcessorTests(unittest.TestCase):
 
         self.assertEqual([], fake_xlrd.opened)
 
+    def test_process_rejects_embedded_nul_workbook_path_before_opening_workbook(self):
+        processor, fake_xlrd = self.processor([])
+
+        with self.assertRaisesRegex(
+            parse.InvalidDataException,
+            "Workbook path must reference an accessible regular file",
+        ):
+            processor.process("fixture\0.xls", "People", False, [])
+
+        self.assertEqual([], fake_xlrd.opened)
+
     def test_process_rejects_blank_sheet_name_before_opening_workbook(self):
         processor, fake_xlrd = self.processor([])
 

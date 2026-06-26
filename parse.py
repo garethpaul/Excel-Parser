@@ -170,7 +170,7 @@ class ExcelProcessor:
             raise InvalidDataException("Workbook path must end with .xls")
         try:
             workbook_stat = os.stat(excel)
-        except OSError:
+        except (OSError, ValueError):
             raise InvalidDataException("Workbook path must reference an accessible regular file")
         if not stat.S_ISREG(workbook_stat.st_mode):
             raise InvalidDataException("Workbook path must reference a regular file")

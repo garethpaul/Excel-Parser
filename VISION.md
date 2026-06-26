@@ -48,6 +48,7 @@ Current baseline:
   input consumption before workbook files are opened.
 - Workbook paths are validated before workbook files are opened and remain scoped
   to regular `.xls` files no larger than 64 MiB.
+- Malformed workbook path strings, including embedded NUL values, fail through `InvalidDataException` before workbook access.
 - Sheet rows and text cells remain bounded by the legacy `.xls` limits, and
   malformed cell reads cannot be downgraded to missing values.
 - Formula cells rely on stored cached results; the parser does not evaluate

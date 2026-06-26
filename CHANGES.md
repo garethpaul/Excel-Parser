@@ -1,5 +1,61 @@
 # Changes
 
+## 2026-06-26 08:02 PDT
+
+Priority: correctness and parser exception-boundary integrity.
+
+Summary:
+
+- Contained malformed workbook path strings inside the parser's documented
+  `InvalidDataException` contract.
+
+Work completed:
+
+- Caught path-shape `ValueError` alongside filesystem `OSError` around
+  `os.stat`.
+- Added an embedded-NUL `.xls` regression that proves workbook access never
+  begins.
+- Added a hostile mutation, static contracts, guidance, and implementation plans.
+
+Threads:
+
+- Workbook preflight, malformed filesystem input, callback-facing exception
+  consistency, and maintained verification.
+
+Files changed:
+
+- `parse.py`, `tests/test_parse.py`, mutation and baseline scripts, project
+  guidance, and workbook-path plans.
+
+Validation:
+
+- Red phase: `fixture\0.xls` raised raw `ValueError: embedded null byte`.
+- Green focused and full Python 3.12 tests pass with 49 tests.
+- Python 3.12 and 3.14 `make check` pass with 49 tests, mutation rejection, and
+  zero known audit vulnerabilities; external Make passes on Python 3.14.
+- Python 3.10 passes compilation, all 49 tests, static contracts, and the hostile
+  mutation. Its local `pip-audit` scratch environment is blocked by unavailable
+  `ensurepip`; hosted Python 3.10 is the authoritative full gate.
+- Implementation head `a3a39afa449f08a1f0fdc6cdd63c958b007245f1` passed hosted
+  run `28246685183` on Python 3.10, 3.12, and 3.14, including audits and CodeQL
+  for Actions and Python.
+- `codex review --base origin/master` was attempted and skipped after HTTP 401
+  authentication errors, per the maintenance loop policy.
+
+Bugs and findings:
+
+- The `.xls` suffix check allowed embedded-NUL strings to reach `os.stat`, whose
+  `ValueError` bypassed the parser's public validation exception.
+- Malformed workbook path strings, including embedded NUL values, fail through `InvalidDataException` before workbook access.
+
+Blockers:
+
+- Codex review authentication is unavailable; executable hosted gates are green.
+
+Next action:
+
+- Verify the evidence-only final PR head, then merge that exact commit.
+
 ## 2026-06-19
 
 - Required regular `.xls` files no larger than 64 MiB and bounded sheets and

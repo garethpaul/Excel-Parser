@@ -23,6 +23,9 @@ TARGET_TYPE_BUDGET_PLAN="$ROOT_DIR/docs/plans/2026-06-14-target-cell-type-budget
 CONTROL_CHARACTER_PLAN="$ROOT_DIR/docs/plans/2026-06-14-control-character-error-summaries.md"
 CODEQL_PLAN="$ROOT_DIR/docs/plans/2026-06-14-codeql-analysis.md"
 DATE_TARGET_PLAN="$ROOT_DIR/docs/plans/2026-06-15-date-target-preflight.md"
+WORKBOOK_VALUE_ERROR_DESIGN="$ROOT_DIR/docs/plans/2026-06-26-workbook-path-value-error-design.md"
+WORKBOOK_VALUE_ERROR_PLAN="$ROOT_DIR/docs/plans/2026-06-26-workbook-path-value-error.md"
+WORKBOOK_PATH_MUTATION="$ROOT_DIR/scripts/test-workbook-path-mutation.py"
 
 require_file() {
   path=$1
@@ -43,6 +46,7 @@ for path in \
   "parse.py" \
   "requirements-dev.txt" \
   "requirements.txt" \
+  "scripts/test-workbook-path-mutation.py" \
   "tests/test_parse.py" \
   "tests/test_xls_integration.py" \
   "docs/plans/2026-06-09-text-number-conversion-errors.md" \
@@ -65,6 +69,8 @@ for path in \
   "docs/plans/2026-06-14-control-character-error-summaries.md" \
   "docs/plans/2026-06-14-codeql-analysis.md" \
   "docs/plans/2026-06-15-date-target-preflight.md" \
+  "docs/plans/2026-06-26-workbook-path-value-error-design.md" \
+  "docs/plans/2026-06-26-workbook-path-value-error.md" \
   "docs/plans/2026-06-08-fractional-int-conversion.md" \
   "docs/plans/2026-06-08-excel-parser-maintenance-baseline.md"; do
   require_file "$path"
@@ -200,6 +206,7 @@ fi
 
 (cd "$ROOT_DIR" && python3 -m py_compile parse.py tests/test_parse.py tests/test_xls_integration.py)
 (cd "$ROOT_DIR" && python3 -m unittest discover -s tests -p "test*.py")
+python3 "$WORKBOOK_PATH_MUTATION"
 
 if ! grep -Fq "status: completed" "$PLAN"; then
   printf '%s\n' "Plan must be marked completed." >&2
@@ -256,6 +263,32 @@ if ! grep -Fq "Workbook paths are validated as non-empty .xls paths before openi
   printf '%s\n' "README must document workbook path validation before workbook access." >&2
   exit 1
 fi
+
+if ! grep -Fq 'except (OSError, ValueError):' "$ROOT_DIR/parse.py" ||
+  ! grep -Fq 'test_process_rejects_embedded_nul_workbook_path_before_opening_workbook' "$ROOT_DIR/tests/test_parse.py" ||
+  ! grep -Fq 'processor.process("fixture\0.xls", "People", False, [])' "$ROOT_DIR/tests/test_parse.py" ||
+  ! grep -Fq 'embedded-NUL workbook path hostile mutation rejected' "$WORKBOOK_PATH_MUTATION"; then
+  printf '%s\n' "Malformed workbook stat paths must remain inside InvalidDataException." >&2
+  exit 1
+fi
+
+workbook_value_error_guidance='Malformed workbook path strings, including embedded NUL values, fail through `InvalidDataException` before workbook access.'
+for workbook_value_error_doc in AGENTS.md README.md SECURITY.md VISION.md CHANGES.md; do
+  if ! grep -Fq "$workbook_value_error_guidance" "$ROOT_DIR/$workbook_value_error_doc"; then
+    printf '%s\n' "$workbook_value_error_doc must document malformed workbook path handling." >&2
+    exit 1
+  fi
+done
+
+for workbook_value_error_plan in "$WORKBOOK_VALUE_ERROR_DESIGN" "$WORKBOOK_VALUE_ERROR_PLAN"; do
+  if [ "$(grep -c '^status: completed$' "$workbook_value_error_plan" || true)" -ne 1 ] ||
+    ! grep -Fq '49 tests' "$workbook_value_error_plan" ||
+    ! grep -Fq 'embedded-NUL workbook path hostile mutation rejected' "$workbook_value_error_plan" ||
+    ! grep -Fq 'make check' "$workbook_value_error_plan"; then
+    printf '%s\n' "Workbook path ValueError plans must record completed local verification." >&2
+    exit 1
+  fi
+done
 
 for option_contract in \
   "not isinstance(cell_type, int)" \
