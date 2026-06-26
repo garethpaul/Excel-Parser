@@ -1,5 +1,57 @@
 # Changes
 
+## 2026-06-26 08:02 PDT
+
+Priority: correctness and parser exception-boundary integrity.
+
+Summary:
+
+- Contained malformed workbook path strings inside the parser's documented
+  `InvalidDataException` contract.
+
+Work completed:
+
+- Caught path-shape `ValueError` alongside filesystem `OSError` around
+  `os.stat`.
+- Added an embedded-NUL `.xls` regression that proves workbook access never
+  begins.
+- Added a hostile mutation, static contracts, guidance, and implementation plans.
+
+Threads:
+
+- Workbook preflight, malformed filesystem input, callback-facing exception
+  consistency, and maintained verification.
+
+Files changed:
+
+- `parse.py`, `tests/test_parse.py`, mutation and baseline scripts, project
+  guidance, and workbook-path plans.
+
+Validation:
+
+- Red phase: `fixture\0.xls` raised raw `ValueError: embedded null byte`.
+- Green focused and full Python 3.12 tests pass with 49 tests.
+- Python 3.12 and 3.14 `make check` pass with 49 tests, mutation rejection, and
+  zero known audit vulnerabilities; external Make passes on Python 3.14.
+- Python 3.10 passes compilation, all 49 tests, static contracts, and the hostile
+  mutation. Its local `pip-audit` scratch environment is blocked by unavailable
+  `ensurepip`; hosted Python 3.10 remains the authoritative full gate.
+- Hosted checks, CodeQL, and review are pending.
+
+Bugs and findings:
+
+- The `.xls` suffix check allowed embedded-NUL strings to reach `os.stat`, whose
+  `ValueError` bypassed the parser's public validation exception.
+- Malformed workbook path strings, including embedded NUL values, fail through `InvalidDataException` before workbook access.
+
+Blockers:
+
+- None for local implementation.
+
+Next action:
+
+- Push the focused PR, then verify hosted Python 3.10/3.12/3.14 and CodeQL.
+
 ## 2026-06-19
 
 - Required regular `.xls` files no larger than 64 MiB and bounded sheets and

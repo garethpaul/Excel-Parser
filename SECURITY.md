@@ -53,6 +53,7 @@ resources are touched. Sheets above 65,536 rows and text cells above 32,767
 characters are rejected before callback delivery. Formula evaluation is not
 performed; only cached workbook results are read, and incompatible cached values
 fail through the row exception path.
+Malformed workbook path strings, including embedded NUL values, fail through `InvalidDataException` before workbook access.
 
 An opened workbook with a missing or non-callable release hook must fail before
 sheet access or callbacks so completion never claims unperformed cleanup.

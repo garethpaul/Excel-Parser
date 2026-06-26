@@ -73,6 +73,7 @@ this baseline.
 - Workbook paths are validated as non-empty .xls paths before opening files,
   matching the documented `xlrd` 2.x `.xls` boundary. Paths must resolve to
   regular files no larger than 64 MiB.
+- Malformed workbook path strings, including embedded NUL values, fail through `InvalidDataException` before workbook access.
 - Sheet names must be non-empty strings and `has_header` must be a real boolean;
   invalid processing options fail before workbook files are opened.
 - Numeric cells convert to `CELL_INT` only when the value is integer-valued;
@@ -163,6 +164,9 @@ When the required SDK or runtime is unavailable, use static checks and source re
   schema normalization.
 - See `docs/plans/2026-06-09-workbook-path-validation.md` for workbook path
   validation before workbook access.
+- See `docs/plans/2026-06-26-workbook-path-value-error-design.md` and
+  `docs/plans/2026-06-26-workbook-path-value-error.md` for malformed filesystem
+  path exception handling.
 - See `docs/plans/2026-06-10-ci-baseline.md` for the GitHub Actions baseline.
 - See `docs/plans/2026-06-14-codeql-analysis.md` for the pinned,
   least-privilege code-scanning contract.

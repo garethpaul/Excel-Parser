@@ -47,6 +47,7 @@
 - Use synthetic spreadsheets or fake workbook objects in tests. Do not commit private spreadsheet data.
 - Parser errors should avoid dumping full row contents unless a caller explicitly asks for that behavior.
 - Real workbook paths must be regular `.xls` files no larger than 64 MiB; `.xlsx` support is not part of the current `xlrd` 2.x contract.
+- Malformed workbook path strings, including embedded NUL values, fail through `InvalidDataException` before workbook access.
 - Validate the sheet name, boolean header flag, and exact integer target-type constants before opening a workbook. Do not accept booleans or numerically equivalent floats as schema aliases.
 - Limit target schemas to 256 target columns and keep iterable normalization bounded before workbook access.
 - Reject sheets above 65,536 rows and text cells above 32,767 characters; do not silently convert inconsistent cell reads into missing values.
